@@ -259,18 +259,42 @@ with app.app_context():
     db.create_all()
 
     # Ensure there is always at least one admin user (bootstrap from env)
+    #
+    # If you ever get locked out in production, you can force-reset the admin
+    # credentials by setting:
+    #   FORCE_BOOTSTRAP_ADMIN=1
+    #   APP_USERNAME=<admin username>
+    #   APP_PASSWORD=<admin password>   (or APP_PASSWORD_HASH)
+    # Then redeploy once, log in, and remove FORCE_BOOTSTRAP_ADMIN.
     try:
-        existing_admin = User.query.filter(User.role == 'admin').first()
-        if not existing_admin:
-            admin_username = (os.environ.get('APP_USERNAME') or 'admin').strip() or 'admin'
-            password_hash = (os.environ.get('APP_PASSWORD_HASH') or '').strip()
+        force_bootstrap = (os.environ.get('FORCE_BOOTSTRAP_ADMIN') or '').strip().lower() in {'1', 'true', 'yes', 'on'}
+        admin_username = (os.environ.get('APP_USERNAME') or 'admin').strip() or 'admin'
+        password_hash = (os.environ.get('APP_PASSWORD_HASH') or '').strip()
+        _, admin_password = _bootstrap_admin_credentials()
+
+        # Prefer an admin user that matches APP_USERNAME.
+        admin_user = (
+            User.query
+            .filter(User.role == 'admin')
+            .filter(func.lower(User.username) == admin_username.lower())
+            .first()
+        )
+        any_admin = User.query.filter(User.role == 'admin').first()
+
+        if not any_admin:
             u = User(username=admin_username, role='admin', company_id=None)
             if password_hash:
                 u.password_hash = password_hash
             else:
-                _, admin_password = _bootstrap_admin_credentials()
                 u.set_password(admin_password)
             db.session.add(u)
+            db.session.commit()
+        elif force_bootstrap and admin_user:
+            # Reset password for the configured admin user.
+            if password_hash:
+                admin_user.password_hash = password_hash
+            else:
+                admin_user.set_password(admin_password)
             db.session.commit()
     except Exception:
         db.session.rollback()
