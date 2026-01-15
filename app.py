@@ -272,16 +272,14 @@ with app.app_context():
         password_hash = (os.environ.get('APP_PASSWORD_HASH') or '').strip()
         _, admin_password = _bootstrap_admin_credentials()
 
-        # Prefer an admin user that matches APP_USERNAME.
-        admin_user = (
-            User.query
-            .filter(User.role == 'admin')
-            .filter(func.lower(User.username) == admin_username.lower())
-            .first()
-        )
+        # Any existing admin (used to decide whether we must create one).
         any_admin = User.query.filter(User.role == 'admin').first()
 
+        # Any user matching APP_USERNAME (admin or owner).
+        target_user = User.query.filter(func.lower(User.username) == admin_username.lower()).first()
+
         if not any_admin:
+            # Fresh DB: create the first admin user.
             u = User(username=admin_username, role='admin', company_id=None)
             if password_hash:
                 u.password_hash = password_hash
@@ -289,12 +287,22 @@ with app.app_context():
                 u.set_password(admin_password)
             db.session.add(u)
             db.session.commit()
-        elif force_bootstrap and admin_user:
-            # Reset password for the configured admin user.
+        elif force_bootstrap:
+            # Operator recovery mode: ensure APP_USERNAME exists and is admin.
+            if not target_user:
+                target_user = User(username=admin_username, role='admin', company_id=None)
+                db.session.add(target_user)
+
+            # Promote to admin and detach from any company scope.
+            target_user.role = 'admin'
+            target_user.company_id = None
+
+            # Reset password.
             if password_hash:
-                admin_user.password_hash = password_hash
+                target_user.password_hash = password_hash
             else:
-                admin_user.set_password(admin_password)
+                target_user.set_password(admin_password)
+
             db.session.commit()
     except Exception:
         db.session.rollback()
