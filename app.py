@@ -44,6 +44,17 @@ def _get_database_uri() -> str:
 app.config['SQLALCHEMY_DATABASE_URI'] = _get_database_uri()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Improve reliability with managed Postgres (stale connections can cause intermittent failures).
+try:
+    _db_uri = str(app.config.get('SQLALCHEMY_DATABASE_URI') or '')
+except Exception:
+    _db_uri = ''
+if _db_uri and not _db_uri.startswith('sqlite'):
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+        'pool_recycle': 280,
+    }
+
 # Cookie hardening in production (keep local dev working over http://)
 if (os.environ.get('FLASK_ENV') or '').lower() == 'production' or (os.environ.get('ENV') or '').lower() == 'production':
     app.config['SESSION_COOKIE_HTTPONLY'] = True
@@ -51,6 +62,23 @@ if (os.environ.get('FLASK_ENV') or '').lower() == 'production' or (os.environ.ge
     app.config['SESSION_COOKIE_SECURE'] = True
 
 db.init_app(app)
+
+
+@app.after_request
+def _no_cache_dynamic_pages(response):
+    """Avoid stale HTML pages after writes in hosted environments.
+
+    Leave static assets cacheable.
+    """
+    try:
+        if request.path.startswith('/static/'):
+            return response
+    except Exception:
+        return response
+
+    response.headers['Cache-Control'] = 'no-store, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    return response
 
 
 def _bootstrap_admin_credentials() -> tuple[str, str]:
