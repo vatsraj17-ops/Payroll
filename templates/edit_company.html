@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Edit Company</h2>
+<form method="post">
+  <div class="mb-3">
+    <label class="form-label">Name</label>
+    <input name="name" class="form-control" value="{{ company.name }}">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Address</label>
+    <input name="address" class="form-control" value="{{ company.address }}">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Business Number</label>
+    <input name="business_number" class="form-control" value="{{ company.business_number }}">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Logo (PNG/JPG)</label>
+    <input type="file" name="logo" accept="image/*" class="form-control">
+    {% if company.logo_filename %}
+      <div class="mt-2"><img src="/static/logos/{{ company.logo_filename }}" alt="logo" style="max-height:60px;"></div>
+    {% endif %}
+  </div>
+  <button class="btn btn-primary">Save</button>
+</form>
+{% endblock %}

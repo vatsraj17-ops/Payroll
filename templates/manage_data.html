@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Edit Data</h2>
+<div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">View and delete saved payroll lines (up to 200 most recent by filter).</div>
+
+<form method="get" action="/manage/data" class="mb-3">
+  <input type="hidden" name="run" value="1">
+  <div class="row g-2">
+    <div class="col-12 col-md-3">
+      <label class="form-label" style="font-size:0.9rem;">Company</label>
+      <select name="company_id" class="form-select form-select-sm">
+        <option value="">-- Company --</option>
+        {% for c in companies %}
+          <option value="{{ c.id }}" {% if selected_company_id and selected_company_id|int == c.id %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-3">
+      <label class="form-label" style="font-size:0.9rem;">Employee</label>
+      <select name="employee_id" class="form-select form-select-sm">
+        <option value="">-- Employee --</option>
+        {% for e in employees %}
+          <option value="{{ e.id }}" {% if selected_employee_id and selected_employee_id|int == e.id %}selected{% endif %}>{{ e.first_name }} {{ e.last_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-3">
+      <label class="form-label" style="font-size:0.9rem;">From</label>
+      <input name="date_from" type="date" class="form-control form-control-sm" value="{{ selected_date_from }}">
+    </div>
+    <div class="col-12 col-md-3">
+      <label class="form-label" style="font-size:0.9rem;">To</label>
+      <input name="date_to" type="date" class="form-control form-control-sm" value="{{ selected_date_to }}">
+    </div>
+  </div>
+  <div class="mt-2">
+    <button class="btn btn-primary btn-sm">Filter</button>
+  </div>
+</form>
+
+{% if not run %}
+  <p class="text-muted">No payroll data shown. Use the filter and click <strong>Filter</strong> to load saved entries.</p>
+{% elif lines and lines|length > 0 %}
+  <table class="table table-sm align-middle">
+    <thead>
+      <tr>
+        <th>Pay Date</th>
+        <th>Company</th>
+        <th>Employee</th>
+        <th class="text-end">Gross</th>
+        <th class="text-end">Net</th>
+        <th class="text-end">Remittance</th>
+        <th class="text-end">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pl in lines %}
+        <tr>
+          <td>{{ pl.pay_date or '' }}</td>
+          <td>{{ pl.employee.company.name if pl.employee and pl.employee.company else '' }}</td>
+          <td>{{ pl.employee.first_name }} {{ pl.employee.last_name }}</td>
+          <td class="text-end">{{ (pl.gross or 0) | money }}</td>
+          <td class="text-end">{{ (pl.net or 0) | money }}</td>
+          <td class="text-end">{{ (pl.total_remittance or 0) | money }}</td>
+          <td class="text-end">
+            <a class="btn btn-outline-secondary btn-sm" href="/payroll/{{ pl.id }}/edit?next={{ next_url_encoded }}">Edit</a>
+            <form method="post" action="/payroll/{{ pl.id }}/delete" style="display:inline;" onsubmit="return confirm('Delete this payroll line?');">
+              <button class="btn btn-outline-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p class="text-muted">No payroll lines match the filters.</p>
+{% endif %}
+
+{% endblock %}

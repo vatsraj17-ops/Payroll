@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Edit Company</h2>
+<div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">Select a company to view details and edit.</div>
+
+<form method="get" action="/manage/companies" class="mb-3" style="max-width: 720px;">
+  <div class="row g-2 align-items-end">
+    <div class="col-12 col-md-8">
+      <label class="form-label" style="font-size:0.9rem;">Company</label>
+      <select name="company_id" class="form-select form-select-sm" required>
+        <option value="">-- Select Company --</option>
+        {% for c in companies %}
+          <option value="{{ c.id }}" {% if selected_company_id and selected_company_id|int == c.id %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-4">
+      <button class="btn btn-primary btn-sm w-100" type="submit">Show</button>
+    </div>
+  </div>
+</form>
+
+{% if selected_company %}
+  <div class="card card-body" style="max-width: 920px;">
+    <div class="row g-2">
+      <div class="col-12 col-md-6">
+        <div class="text-muted" style="font-size:0.85rem;">Company Name</div>
+        <div class="fw-semibold">{{ selected_company.name }}</div>
+      </div>
+      <div class="col-12 col-md-6">
+        <div class="text-muted" style="font-size:0.85rem;">Business Number</div>
+        <div class="fw-semibold">{{ selected_company.business_number or '' }}</div>
+      </div>
+      <div class="col-12">
+        <div class="text-muted" style="font-size:0.85rem;">Address</div>
+        <div class="fw-semibold">{{ selected_company.address or '' }}</div>
+      </div>
+      <div class="col-12 mt-2">
+        <a class="btn btn-outline-primary btn-sm" href="/companies/{{ selected_company.id }}/edit">Edit</a>
+        <form method="post" action="/companies/{{ selected_company.id }}/delete" style="display:inline;" onsubmit="return confirm('Delete this company?');">
+          <button class="btn btn-outline-danger btn-sm" type="submit">Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% else %}
+  <p class="text-muted">No company selected.</p>
+{% endif %}
+{% endblock %}

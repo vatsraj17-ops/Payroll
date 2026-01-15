@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Data Entry</h2>
+<form method="post" class="mb-4">
+  <div class="row g-2 mb-2">
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">Company</label>
+      <select name="company_id" id="company_id" class="form-select form-select-sm">
+        <option value="">-- Select company --</option>
+        {% for c in companies %}
+          <option value="{{ c.id }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">Employee</label>
+      <select name="employee_id" id="employee_id" class="form-select form-select-sm">
+        <option value="">-- Select employee --</option>
+        {% for e in employees %}
+          <option value="{{ e.id }}" data-pay-rate="{{ e.pay_rate or 0 }}">{{ e.first_name }} {{ e.last_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-2">
+      <label class="form-label" style="font-size:0.9rem;">Total Hrs</label>
+      <input name="total_hours" id="total_hours" type="number" step="0.01" min="0" class="form-control form-control-sm" placeholder="Hours">
+    </div>
+    <div class="col-12 col-md-2">
+      <label class="form-label" style="font-size:0.9rem;">Pay Rate</label>
+      <input id="pay_rate" type="text" class="form-control form-control-sm" placeholder="Auto" readonly>
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">Gross Pay</label>
+      <input name="gross" id="gross" class="form-control form-control-sm" placeholder="Auto (Hrs × Rate)">
+    </div>
+  </div>
+
+  <div class="row g-2 mb-2">
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">Start Date</label>
+      <input name="period_start" type="date" class="form-control form-control-sm">
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">End Date</label>
+      <input name="period_end" type="date" class="form-control form-control-sm">
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">Pay Date</label>
+      <input name="pay_date" type="date" class="form-control form-control-sm">
+    </div>
+  </div>
+
+  <div class="form-check mb-2">
+    <input class="form-check-input" type="checkbox" id="manual" name="manual">
+    <label class="form-check-label" for="manual">Manual calculation</label>
+  </div>
+
+  <div id="manual_fields">
+    <div class="row g-2 mb-2">
+      <div class="col-12 col-md-4">
+        <label class="form-label" style="font-size:0.9rem;">CPP (employee)</label>
+        <input name="manual_cpp" class="form-control form-control-sm" placeholder="CPP (employee)">
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label" style="font-size:0.9rem;">EI (employee)</label>
+        <input name="manual_ei" class="form-control form-control-sm" placeholder="EI (employee)">
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label" style="font-size:0.9rem;">Federal tax</label>
+        <input name="manual_fed" class="form-control form-control-sm" placeholder="Federal tax">
+      </div>
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col-12 col-md-4">
+        <label class="form-label" style="font-size:0.9rem;">Ontario tax</label>
+        <input name="manual_ont" class="form-control form-control-sm" placeholder="Ontario tax">
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label" style="font-size:0.9rem;">Employer CPP</label>
+        <input name="manual_cpp_employer" class="form-control form-control-sm" placeholder="Employer CPP">
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label" style="font-size:0.9rem;">Employer EI</label>
+        <input name="manual_ei_employer" class="form-control form-control-sm" placeholder="Employer EI">
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary btn-sm" type="submit" name="action" value="preview">Preview</button>
+    <button class="btn btn-primary btn-sm" type="submit" name="action" value="submit">Submit</button>
+  </div>
+</form>
+
+<script>
+// Simple client-side toggle for manual fields
+document.addEventListener('DOMContentLoaded', function(){
+  const manual = document.getElementById('manual');
+  const fields = document.getElementById('manual_fields');
+  fields.style.display = 'none';
+  manual && manual.addEventListener('change', function(){
+    fields.style.display = manual.checked ? 'block' : 'none';
+  });
+
+  // Auto-calc Gross = Total Hrs × Pay Rate (from selected employee)
+  const employeeSelect = document.getElementById('employee_id');
+  const hoursInput = document.getElementById('total_hours');
+  const payRateInput = document.getElementById('pay_rate');
+  const grossInput = document.getElementById('gross');
+
+  function getSelectedPayRate() {
+    const opt = employeeSelect && employeeSelect.selectedOptions && employeeSelect.selectedOptions[0];
+    if (!opt) return 0;
+    const raw = opt.getAttribute('data-pay-rate') || '0';
+    const val = parseFloat(raw);
+    return isNaN(val) ? 0 : val;
+  }
+
+  function recalcGross() {
+    const rate = getSelectedPayRate();
+    if (payRateInput) payRateInput.value = rate ? rate.toFixed(2) : '';
+
+    const hrs = parseFloat(hoursInput && hoursInput.value ? hoursInput.value : '');
+    if (!rate || !hoursInput || !grossInput || isNaN(hrs)) return;
+    grossInput.value = (hrs * rate).toFixed(2);
+  }
+
+  employeeSelect && employeeSelect.addEventListener('change', recalcGross);
+  hoursInput && hoursInput.addEventListener('input', recalcGross);
+});
+</script>
+
+{% if result %}
+  <h4 class="mt-3">Calculated</h4>
+
+  {% if mode == 'preview' %}
+    <table class="table table-sm align-middle">
+      <tbody>
+        <tr>
+          <th style="width:55%;">Vacation Pay</th>
+          <td class="text-end">
+            {% if result.meta and result.meta.vacation_pay_enabled %}
+              {{ result.meta.vacation_pay | money }}
+            {% endif %}
+          </td>
+        </tr>
+        <tr><th style="width:55%;">Gross</th><td class="text-end">{{ result.gross | money }}</td></tr>
+        <tr><th>Total deductions</th><td class="text-end">{{ result.total_employee_deductions | money }}</td></tr>
+        <tr><th>Net pay</th><td class="text-end fw-semibold">{{ result.net_pay | money }}</td></tr>
+      </tbody>
+    </table>
+  {% else %}
+    <table class="table table-sm align-middle">
+      <tbody>
+        {% if result.meta %}
+          <tr><th>Total Hrs</th><td class="text-end">{{ result.meta.total_hours }}</td></tr>
+          <tr><th>Pay Rate Used</th><td class="text-end">{{ result.meta.pay_rate_used | money }}</td></tr>
+          <tr>
+            <th>Vacation Pay</th>
+            <td class="text-end">
+              {% if result.meta.vacation_pay_enabled %}
+                {{ result.meta.vacation_pay | money }}
+              {% endif %}
+            </td>
+          </tr>
+        {% endif %}
+        <tr><th>Gross</th><td class="text-end">{{ result.gross | money }}</td></tr>
+        <tr><th>CPP (employee)</th><td class="text-end">{{ result.cpp_employee | money }}</td></tr>
+        <tr><th>Second CPP (CPP2) (employee)</th><td class="text-end">{{ result.cpp2_employee | money }}</td></tr>
+        <tr><th>EI (employee)</th><td class="text-end">{{ result.ei_employee | money }}</td></tr>
+        <tr><th>Federal tax</th><td class="text-end">{{ result.federal_tax | money }}</td></tr>
+        <tr><th>Ontario tax</th><td class="text-end">{{ result.ontario_tax | money }}</td></tr>
+        <tr><th>Employer CPP</th><td class="text-end">{{ result.cpp_employer | money }}</td></tr>
+        <tr><th>Second CPP (CPP2) (employer)</th><td class="text-end">{{ result.cpp2_employer | money }}</td></tr>
+        <tr><th>Employer EI</th><td class="text-end">{{ result.ei_employer | money }}</td></tr>
+        <tr><th>Total deductions</th><td class="text-end">{{ result.total_employee_deductions | money }}</td></tr>
+        <tr><th>Net pay</th><td class="text-end fw-semibold">{{ result.net_pay | money }}</td></tr>
+      </tbody>
+    </table>
+  {% endif %}
+{% endif %}
+
+{% endblock %}

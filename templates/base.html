@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Payroll App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      /* Left accent card style for a subtle professional look */
+      .card-accent { border: none; box-shadow: 0 1px 3px rgba(16,24,40,0.04); border-left: 4px solid #0d6efd; }
+      .card-accent .card-body { padding: .75rem 1rem; }
+      .card-accent:hover { box-shadow: 0 4px 12px rgba(13,110,253,0.08); }
+      .accent-link { color: #0d6efd; font-weight: 600; }
+    </style>
+  </head>
+  <body style="min-height:100vh; display:flex; flex-direction:column;">
+    <style>
+      .nav-card {
+        display: flex;
+        align-items: center;
+        background: #C3C3C3;
+        border-radius: 6px;
+        margin-bottom: 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        border-left: 4px solid #B0151A;
+        padding: .5rem .85rem;
+        transition: box-shadow 0.2s;
+      }
+      .nav-card:hover {
+        box-shadow: 0 4px 16px rgba(176,21,26,0.08);
+        background: #e0e0e0;
+      }
+      .nav-card a {
+        text-decoration: none;
+        color: #000;
+        font-weight: 600;
+        font-size: 1rem;
+        letter-spacing: 0.5px;
+      }
+    </style>
+    <header class="py-3 mb-1 border-bottom" style="background:#C3C3C3;">
+      <div class="container d-flex align-items-center">
+        <img src="{{ url_for('static', filename='logos/cropped-PB-tax-Logo-1.png') }}" alt="PB Tax Solutions Inc." style="height:84px; margin-right:20px; object-fit:contain; filter:brightness(0) saturate(100%) invert(13%) sepia(99%) saturate(7499%) hue-rotate(349deg) brightness(90%) contrast(110%);">
+        <div>
+          <h2 class="mb-1" style="color:#B0151A;">PB Tax Solutions Inc.</h2>
+          <div class="d-flex align-items-baseline gap-3">
+            <span class="h5 mb-0" style="color:#B0151A; font-weight:600;">Payroll Made Simple.</span>
+            <span style="color:#B0151A; font-size:1.25rem; font-weight:600;">|</span>
+            <span class="h5 mb-0" style="color:#B0151A; font-weight:600;">Accuracy Guaranteed</span>
+          </div>
+        </div>
+
+        <div class="ms-auto">
+          {% if session.get('user_id') %}
+            <a href="/change-password" class="btn btn-sm me-2" style="border:1px solid #B0151A; color:#B0151A; font-weight:600;">Change Password</a>
+            <a href="/logout" class="btn btn-sm" style="border:1px solid #B0151A; color:#B0151A; font-weight:600;">Logout</a>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+
+    <div class="container mt-1 mb-3">
+      {% set role = session.get('role') %}
+      <div class="d-flex gap-2 justify-content-center flex-wrap">
+        <div class="nav-card"><a href="/">Home</a></div>
+        {% if role == 'admin' %}
+          <div class="nav-card"><a href="/companies">Company</a></div>
+          <div class="nav-card"><a href="/employees">Employee</a></div>
+          <div class="nav-card"><a href="/data-entry">Data Entry</a></div>
+          <div class="nav-card"><a href="/reports">Reports</a></div>
+        {% elif role == 'owner' %}
+          <div class="nav-card"><a href="/employees">Employee</a></div>
+          <div class="nav-card"><a href="/owner/payroll">Payroll</a></div>
+        {% else %}
+          <div class="nav-card"><a href="/employees">Employee</a></div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="container" style="flex:1 0 auto; max-width: 1100px;">
+      <div class="row">
+        <div class="col-12 col-md-3 mb-3">
+          <div style="background:#C3C3C3; border-left:4px solid #B0151A; border-radius:6px; padding:1rem;">
+            <div style="color:#B0151A; font-weight:600; margin-bottom:.5rem;">Navigation</div>
+            <ul class="mb-0" style="padding-left:1.1rem;">
+              {% if role == 'admin' %}
+                <li><a href="/manage/companies" style="color:#000; text-decoration:none;">Edit Company</a></li>
+                <li><a href="/manage/employees" style="color:#000; text-decoration:none;">Edit Employee</a></li>
+                <li><a href="/manage/data" style="color:#000; text-decoration:none;">Edit Data</a></li>
+                <li><a href="/admin/submissions" style="color:#000; text-decoration:none;">Submissions</a></li>
+                <li><a href="/reports" style="color:#000; text-decoration:none;">Reports</a></li>
+              {% elif role == 'owner' %}
+                <li><a href="/manage/employees" style="color:#000; text-decoration:none;">Edit Employee</a></li>
+                <li><a href="/owner/payroll" style="color:#000; text-decoration:none;">Submit Payroll</a></li>
+              {% else %}
+                <li><a href="/manage/employees" style="color:#000; text-decoration:none;">Edit Employee</a></li>
+              {% endif %}
+            </ul>
+          </div>
+        </div>
+        <div class="col-12 col-md-9">
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' or category == 'danger' else category }} alert-dismissible fade show" role="alert">
+                  {{ message }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              {% endfor %}
+            {% endif %}
+          {% endwith %}
+          {% block content %}{% endblock %}
+        </div>
+      </div>
+    </div>
+    <footer style="background:#C3C3C3; color:#222; padding:2rem 0 1rem 0; margin-top:2rem; flex-shrink:0; width:100%;">
+      <div class="container text-center">
+        <div style="height:1.5rem;"></div>
+        <div style="color:#B0151A; font-weight:600; font-size:1.1rem;">Contact Us</div>
+        <div class="d-flex flex-column align-items-center" style="gap:0.25rem;">
+          <span style="color:#B0151A;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#B0151A" viewBox="0 0 16 16" style="vertical-align:middle; margin-right:4px;"><path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1H2zm13 2.383-4.708 2.825L15 12.118V5.383zm-.034 7.434-5.857-4.513L8 9.882l-1.109-.678-5.857 4.513A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.183zM1 12.118l4.708-3.91L1 5.383v6.735z"/></svg>
+            <a href="mailto:Info@pbtaxsolutions.ca" style="color:#B0151A; text-decoration:none; font-size:1rem;">Info@pbtaxsolutions.ca</a>
+          </span>
+          <span style="color:#B0151A;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#B0151A" viewBox="0 0 16 16" style="vertical-align:middle; margin-right:4px;"><path d="M3.654 1.328a.678.678 0 0 1 .252-.282c.282-.183.65-.16.888.07l2.29 2.197c.329.316.445.819.267 1.24l-.805 1.86a.678.678 0 0 0 .145.73l2.457 2.457a.678.678 0 0 0 .73.145l1.86-.805c.421-.178.924-.062 1.24.267l2.197 2.29c.23.238.253.606.07.888a13.134 13.134 0 0 1-2.01 2.01c-.238.183-.606.16-.888-.07l-2.197-2.29a1.745 1.745 0 0 0-1.24-.267l-1.86.805a.678.678 0 0 1-.73-.145l-2.457-2.457a.678.678 0 0 1-.145-.73l.805-1.86a1.745 1.745 0 0 0-.267-1.24L1.328 3.654a.678.678 0 0 1-.07-.888 13.134 13.134 0 0 1 2.01-2.01z"/></svg>
+            <span style="font-size:1rem;">+1 (236) 550-5555</span>
+          </span>
+        </div>
+        <div class="mt-3" style="color:#B0151A; font-size:1rem;">&copy; 2026 PB Tax Solutions Inc. All rights reserved.</div>
+      </div>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+  </html>

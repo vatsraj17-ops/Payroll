@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Remittance Voucher</title>
+  <style>
+    @page { margin: 0.3in; }
+    body { margin: 0; font-family: "Times New Roman", Times, serif; }
+
+    .voucher {
+      border: none;
+      padding: 14px;
+      background: #fff;
+    }
+    .voucher .small { font-size: 16px; }
+    .voucher .box { border: 2px solid #000; padding: 4px 6px; min-height: 30px; }
+    .voucher .box-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .voucher .value { font-size: 16px; font-weight: 700; }
+    .voucher .amount { font-size: 18px; font-weight: 700; text-align: right; white-space: nowrap; }
+    .voucher .header-strong { font-size: 16px; font-weight: 700; }
+    .voucher .company-strong { font-size: 16px; font-weight: 700; }
+
+    .voucher .line {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+    }
+    .voucher .line .label { font-size: 14px; font-weight: 700; white-space: nowrap; }
+    .voucher .line .val { font-size: 18px; font-weight: 700; white-space: nowrap; }
+
+    .voucher .account-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      flex-wrap: nowrap;
+    }
+    .voucher .account-row .label { font-size: 14px; font-weight: 700; white-space: nowrap; }
+    .voucher .account-row .value { font-size: 16px; font-weight: 700; white-space: nowrap; }
+
+    /* Ensure no extra app chrome exists on this page */
+    @media print {
+      html, body { background: #fff; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="voucher">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+    <div class="header-strong">Canada Revenue Agency</div>
+    <div style="text-align:center;">
+      <div class="header-strong">CURRENT SOURCE DEDUCTIONS</div>
+      <div class="header-strong">REMITTANCE VOUCHER</div>
+    </div>
+    <div class="small" style="font-weight:700;">PD7A E</div>
+  </div>
+
+  <div style="display:flex; justify-content:flex-end; margin-top:14px;">
+    <div style="width:48%;">
+      <div class="box">
+        <div class="account-row">
+          <div class="label">Account number</div>
+          <div class="value">{{ remittance.bn_display }} RP0001</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:18px; margin-top:14px;">
+    <div style="flex:1;">
+      <div class="company-strong">{{ remittance.company_name }}</div>
+      {% if remittance.company_address_lines %}
+        {% for line in remittance.company_address_lines %}
+          <div class="company-strong">{{ line }}</div>
+        {% endfor %}
+      {% else %}
+        <div class="company-strong">{{ remittance.company_address }}</div>
+      {% endif %}
+    </div>
+
+    <div style="width:48%; display:flex; flex-direction:column; gap:12px;">
+      <div class="box">
+        <div class="line">
+          <div class="label">Gross Payroll</div>
+          <div class="val">{{ remittance.total_gross | money }}</div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:12px;">
+        <div class="box" style="flex:1;">
+          <div class="box-title">Employees in last pay period</div>
+          <div class="value">{{ remittance.num_employees_last_pay_period }}</div>
+        </div>
+        <div class="box" style="flex:1;">
+          <div class="box-title">End of remitting period</div>
+          <div style="display:flex; justify-content:space-between; gap:10px;">
+            <div><span class="small">Year</span> <span class="value">{{ remittance.date_to.year }}</span></div>
+            <div><span class="small">Month</span> <span class="value">{{ '%02d'|format(remittance.date_to.month) }}</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="line">
+          <div class="label">Amount paid</div>
+          <div class="val">{{ remittance.total_remittance | money }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% if auto_print %}
+<script>
+  window.addEventListener('load', function(){
+    try { window.print(); } catch (e) {}
+  });
+</script>
+{% endif %}
+</body>
+</html>

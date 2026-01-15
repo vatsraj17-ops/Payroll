@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Edit Employee</h2>
+<form method="post" class="row g-2">
+  <div class="col-md-4">
+    <input name="first_name" class="form-control" value="{{ employee.first_name }}">
+  </div>
+  <div class="col-md-4">
+    <input name="last_name" class="form-control" value="{{ employee.last_name }}">
+  </div>
+  <div class="col-md-6 mt-2">
+    <input name="address" class="form-control" value="{{ employee.address }}">
+  </div>
+  <div class="col-md-3 mt-2">
+    <input name="sin" class="form-control" value="{{ employee.sin }}">
+  </div>
+  <div class="col-md-3 mt-2">
+    <input name="hire_date" type="date" class="form-control" value="{{ employee.hire_date }}">
+  </div>
+  <div class="col-md-3 mt-2">
+    <select name="payroll_frequency" class="form-select">
+      <option value="Weekly" {% if employee.payroll_frequency=='Weekly' %}selected{% endif %}>Weekly</option>
+      <option value="Bi-weekly" {% if employee.payroll_frequency=='Bi-weekly' %}selected{% endif %}>Bi-weekly</option>
+      <option value="Monthly" {% if employee.payroll_frequency=='Monthly' %}selected{% endif %}>Monthly</option>
+    </select>
+  </div>
+  <div class="col-md-3 mt-2">
+    <select name="vacation_pay" class="form-select">
+      <option value="No" {% if not employee.vacation_pay_enabled %}selected{% endif %}>Vacation Pay: No</option>
+      <option value="Yes" {% if employee.vacation_pay_enabled %}selected{% endif %}>Vacation Pay: Yes</option>
+    </select>
+  </div>
+  <div class="col-md-3 mt-2">
+    <select name="ei_exempt" class="form-select">
+      <option value="No" {% if not employee.ei_exempt %}selected{% endif %}>EI Exempt: No</option>
+      <option value="Yes" {% if employee.ei_exempt %}selected{% endif %}>EI Exempt: Yes</option>
+    </select>
+  </div>
+  <div class="col-md-2 mt-2">
+    <input name="pay_rate" class="form-control" value="{{ employee.pay_rate }}">
+  </div>
+  <div class="col-md-2 mt-2">
+    <input name="salary" class="form-control" value="{{ employee.annual_salary }}">
+  </div>
+  <div class="col-12 mt-2">
+    <button class="btn btn-primary">Save</button>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>{{ title }}</h2>
+<div class="d-flex gap-2 flex-wrap mb-2">
+  <button class="btn btn-secondary btn-sm" type="button" onclick="printPdf()">Print</button>
+  <a class="btn btn-primary btn-sm" href="{{ download_url }}" target="_blank" rel="noopener">Download</a>
+</div>
+
+<div class="ratio" style="--bs-aspect-ratio: 129%;">
+  <iframe id="pdfFrame" src="{{ pdf_url }}" style="width:100%; height:100%; border:1px solid #ddd;"></iframe>
+</div>
+
+<script>
+function printPdf(){
+  const frame = document.getElementById('pdfFrame');
+  if (!frame) return;
+  try {
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
+  } catch (e) {
+    // Fallback: open the PDF directly
+    window.open('{{ pdf_url }}', '_blank');
+  }
+}
+</script>
+{% endblock %}

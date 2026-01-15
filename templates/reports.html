@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Reports</h2>
+<div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">Select filters to see report options.</div>
+
+<form method="post" action="/reports" class="mb-4">
+	<div class="row g-2 mb-2">
+		<div class="col-12 col-md-3">
+			<label class="form-label" style="font-size:0.9rem;">Company</label>
+			<select name="company_id" class="form-select form-select-sm">
+				<option value="">-- Company --</option>
+				{% for c in companies %}
+					<option value="{{ c.id }}" {% if selected_company_id and selected_company_id|int == c.id %}selected{% endif %}>{{ c.name }}</option>
+				{% endfor %}
+			</select>
+		</div>
+		<div class="col-12 col-md-3">
+			<label class="form-label" style="font-size:0.9rem;">Employee (optional)</label>
+			<select name="employee_id" class="form-select form-select-sm">
+				<option value="">-- Employee --</option>
+				{% for e in employees %}
+					<option value="{{ e.id }}" {% if selected_employee_id and selected_employee_id|int == e.id %}selected{% endif %}>{{ e.first_name }} {{ e.last_name }}</option>
+				{% endfor %}
+			</select>
+		</div>
+		<div class="col-12 col-md-3">
+			<label class="form-label" style="font-size:0.9rem;">From</label>
+			<input name="date_from" type="date" class="form-control form-control-sm" value="{{ selected_date_from }}">
+		</div>
+		<div class="col-12 col-md-3">
+			<label class="form-label" style="font-size:0.9rem;">To</label>
+			<input name="date_to" type="date" class="form-control form-control-sm" value="{{ selected_date_to }}">
+		</div>
+	</div>
+	<button class="btn btn-primary btn-sm">View</button>
+</form>
+
+{% if remittance %}
+	<h4 class="mt-3">Remittance</h4>
+	<div class="card">
+		<div class="card-body">
+			<div class="row g-2">
+				<div class="col-12 col-md-6">
+					<div class="text-muted" style="font-size:0.9rem;">Company Name</div>
+					<div class="fw-semibold">{{ remittance.company_name }}</div>
+				</div>
+				<div class="col-12 col-md-6">
+					<div class="text-muted" style="font-size:0.9rem;">Payroll Account Number</div>
+					<div class="fw-semibold">{{ remittance.payroll_account_number }}</div>
+				</div>
+				<div class="col-12">
+					<div class="text-muted" style="font-size:0.9rem;">Address</div>
+					<div class="fw-semibold">{{ remittance.company_address }}</div>
+				</div>
+				<div class="col-12 col-md-4">
+					<div class="text-muted" style="font-size:0.9rem;">Employees (Selected Period)</div>
+					<div class="fw-semibold">{{ remittance.num_employees }}</div>
+				</div>
+				<div class="col-12 col-md-4">
+					<div class="text-muted" style="font-size:0.9rem;">Total Gross Payroll</div>
+					<div class="fw-semibold">{{ remittance.total_gross | money }}</div>
+				</div>
+				<div class="col-12 col-md-4">
+					<div class="text-muted" style="font-size:0.9rem;">Total Remittance to CRA</div>
+					<div class="fw-semibold">{{ remittance.total_remittance | money }}</div>
+				</div>
+			</div>
+
+			<div class="mt-3">
+				<div class="d-flex gap-2 flex-wrap">
+					<form method="post" action="/reports/summary_preview" target="_blank" class="m-0">
+						<input type="hidden" name="company_id" value="{{ selected_company_id }}">
+						<input type="hidden" name="date_from" value="{{ selected_date_from }}">
+						<input type="hidden" name="date_to" value="{{ selected_date_to }}">
+						<button class="btn btn-info btn-sm">Summary</button>
+					</form>
+					<form method="post" action="/reports/remittance_preview" target="_blank" class="m-0">
+						<input type="hidden" name="company_id" value="{{ selected_company_id }}">
+						<input type="hidden" name="date_from" value="{{ selected_date_from }}">
+						<input type="hidden" name="date_to" value="{{ selected_date_to }}">
+						<button class="btn btn-outline-info btn-sm">Remittance Voucher</button>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+{% endif %}
+
+{% if employee_report %}
+	<h4 class="mt-3">Employee Reports</h4>
+	<div class="d-flex gap-2 flex-wrap">
+		<form method="post" action="/reports/paystubs_preview_page" target="_blank" class="m-0">
+			<input type="hidden" name="company_id" value="{{ employee_report.company.id }}">
+			<input type="hidden" name="employee_id" value="{{ employee_report.employee.id }}">
+			<input type="hidden" name="date_from" value="{{ employee_report.date_from }}">
+			<input type="hidden" name="date_to" value="{{ employee_report.date_to }}">
+			<button class="btn btn-info btn-sm">Paystubs</button>
+		</form>
+
+		<form method="post" action="/reports/roe_preview_page" target="_blank" class="m-0">
+			<input type="hidden" name="company_id" value="{{ employee_report.company.id }}">
+			<input type="hidden" name="employee_id" value="{{ employee_report.employee.id }}">
+			<input type="hidden" name="date_from" value="{{ employee_report.date_from }}">
+			<input type="hidden" name="date_to" value="{{ employee_report.date_to }}">
+			<button class="btn btn-outline-primary btn-sm">ROE</button>
+		</form>
+	</div>
+{% endif %}
+
+{% if (remittance is none) and (employee_report is none) and (selected_company_id or selected_employee_id or selected_date_from or selected_date_to) %}
+	<p class="text-muted">Select Company + Dates for Remittance, or Company + Employee + Dates for Paystubs/ROE.</p>
+{% endif %}
+{% endblock %}

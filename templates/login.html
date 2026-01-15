@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login - Payroll App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  </head>
+  <body style="min-height:100vh; background:#f7f7f7;">
+    <div class="container" style="max-width: 520px; padding-top: 3rem;">
+      <div class="text-center mb-3">
+        <img src="{{ url_for('static', filename='logos/cropped-PB-tax-Logo-1.png') }}" alt="PB Tax Solutions Inc." style="height:84px; object-fit:contain; filter:brightness(0) saturate(100%) invert(13%) sepia(99%) saturate(7499%) hue-rotate(349deg) brightness(90%) contrast(110%);">
+        <h3 class="mt-2" style="color:#B0151A;">PB Tax Solutions Inc.</h3>
+        <div class="text-muted">Sign in to continue</div>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' or category == 'danger' else category }}" role="alert">
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="post" action="/login?next={{ next_url|e }}" class="card card-body">
+        <div class="mb-2">
+          <label class="form-label" style="font-size:0.9rem;">Username</label>
+          <input class="form-control" name="username" autocomplete="username" required>
+        </div>
+        <div class="mb-2">
+          <label class="form-label" style="font-size:0.9rem;">Password</label>
+          <input class="form-control" type="password" name="password" autocomplete="current-password" required>
+        </div>
+        <div class="mt-2 d-grid">
+          <button class="btn btn-primary" type="submit">Login</button>
+        </div>
+      </form>
+
+      <div class="text-center text-muted" style="font-size:0.85rem; margin-top:1rem;">
+        Default dev login: <strong>admin / admin</strong> (change via env vars)
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

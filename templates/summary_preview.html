@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Summary Preview</h2>
+<div class="d-flex gap-2 flex-wrap mb-3">
+  <button class="btn btn-secondary btn-sm" type="button" onclick="window.print()">Print</button>
+  <a class="btn btn-primary btn-sm" href="{{ download_url }}" target="_blank" rel="noopener">Download</a>
+</div>
+
+<div class="mb-3">
+  <div class="fw-semibold">COMPANY NAME: {{ summary.company_name }}</div>
+  <div class="fw-semibold">BUSINESS NUMBER: {{ summary.business_number }}</div>
+  <div class="fw-semibold">START&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ summary.date_from }}</div>
+  <div class="fw-semibold">END&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ summary.date_to }}</div>
+</div>
+
+<style>
+  .summary-table thead th {
+    background: #6f6f6f;
+    color: #fff;
+    font-weight: 600;
+  }
+  .summary-table tbody tr:nth-child(even) td {
+    background: #f3f3f3;
+  }
+  .summary-table tfoot td {
+    font-weight: 700;
+    background: #d9d9d9;
+  }
+  @media print {
+    .btn { display: none !important; }
+    a { text-decoration: none; }
+  }
+</style>
+
+<table class="table table-sm summary-table">
+  <thead>
+    <tr>
+      <th style="width:26%;">Name</th>
+      <th class="text-end">GROSS</th>
+      <th class="text-end">E CPP</th>
+      <th class="text-end">E EI</th>
+      <th class="text-end">FED</th>
+      <th class="text-end">PROV</th>
+      <th class="text-end">C CPP</th>
+      <th class="text-end">C EI</th>
+      <th class="text-end">DEDUCTIONS</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in summary.rows %}
+      <tr>
+        <td>{{ r.name }}</td>
+        <td class="text-end">{{ r.gross | money }}</td>
+        <td class="text-end">{{ r.e_cpp | money }}</td>
+        <td class="text-end">{{ r.e_ei | money }}</td>
+        <td class="text-end">{{ r.fed | money }}</td>
+        <td class="text-end">{{ r.prov | money }}</td>
+        <td class="text-end">{{ r.c_cpp | money }}</td>
+        <td class="text-end">{{ r.c_ei | money }}</td>
+        <td class="text-end">{{ r.deductions | money }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <td>TOTAL</td>
+      <td class="text-end">{{ summary.totals.gross | money }}</td>
+      <td class="text-end">{{ summary.totals.e_cpp | money }}</td>
+      <td class="text-end">{{ summary.totals.e_ei | money }}</td>
+      <td class="text-end">{{ summary.totals.fed | money }}</td>
+      <td class="text-end">{{ summary.totals.prov | money }}</td>
+      <td class="text-end">{{ summary.totals.c_cpp | money }}</td>
+      <td class="text-end">{{ summary.totals.c_ei | money }}</td>
+      <td class="text-end">{{ summary.totals.deductions | money }}</td>
+    </tr>
+  </tfoot>
+</table>
+{% endblock %}

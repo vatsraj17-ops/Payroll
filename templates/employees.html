@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Employee</h2>
+<div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">Employee Personal Details</div>
+<form method="post" class="mb-4">
+  <div class="row g-2">
+    <div class="col-12 col-lg-6">
+      <label class="form-label" style="font-size:0.9rem;">Name</label>
+      <input name="name" class="form-control form-control-sm" placeholder="Name" required>
+    </div>
+    <div class="col-12 col-lg-6">
+      <label class="form-label" style="font-size:0.9rem;">Company</label>
+      <select name="company_id" class="form-select form-select-sm" required>
+        <option value="">-- Select company --</option>
+        {% for c in companies %}
+          <option value="{{ c.id }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12">
+      <label class="form-label" style="font-size:0.9rem;">Address</label>
+      <input name="address" class="form-control form-control-sm" placeholder="Address" required>
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">SIN</label>
+      <input name="sin" class="form-control form-control-sm" placeholder="SIN" required>
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">Hire date</label>
+      <input name="hire_date" type="date" class="form-control form-control-sm" required>
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">Payroll frequency</label>
+      <select name="payroll_frequency" class="form-select form-select-sm" required>
+        <option value="Weekly">Weekly</option>
+        <option value="Bi-weekly">Bi-weekly</option>
+        <option value="Monthly">Monthly</option>
+      </select>
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">Vacation Pay</label>
+      <select name="vacation_pay" class="form-select form-select-sm">
+        <option value="No" selected>No</option>
+        <option value="Yes">Yes</option>
+      </select>
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">EI Exempt</label>
+      <select name="ei_exempt" class="form-select form-select-sm">
+        <option value="No" selected>No</option>
+        <option value="Yes">Yes</option>
+      </select>
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">Pay rate</label>
+      <input name="pay_rate" class="form-control form-control-sm" placeholder="Pay rate" required>
+    </div>
+    <div class="col-12 mt-2">
+      <button class="btn btn-primary btn-sm">Add</button>
+    </div>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="py-4">
+	<div style="color:#000; font-weight:600; font-size:1.25rem;">Welcome to a smarter payroll experience.</div>
+	{% if company_name %}
+		<div style="margin-top:.25rem; font-weight:700; font-size:18px; color:#000;">{{ company_name }}</div>
+	{% endif %}
+	<div style="color:#000; font-style:italic; margin-top:.35rem;">Manage payroll with confidence through precision, security, and automation</div>
+</div>
+
+{% endblock %}

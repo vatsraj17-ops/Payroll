@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Edit Payroll Line</h2>
+<div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">Edit a saved payroll entry (including Pay Date). Deductions and remittance will be recalculated.</div>
+
+<form method="post" action="/payroll/{{ pl.id }}/edit?next={{ next_url_encoded }}" class="card card-body" style="max-width: 880px;">
+  <div class="row g-2">
+    <div class="col-12 col-md-6">
+      <label class="form-label" style="font-size:0.9rem;">Employee</label>
+      <input class="form-control form-control-sm" value="{{ employee.first_name if employee else '' }} {{ employee.last_name if employee else '' }}" disabled>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label" style="font-size:0.9rem;">Company</label>
+      <input class="form-control form-control-sm" value="{{ employee.company.name if employee and employee.company else '' }}" disabled>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">Pay Date</label>
+      <input name="pay_date" type="date" class="form-control form-control-sm" value="{{ pl.pay_date or '' }}" required>
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">Period Start</label>
+      <input name="period_start" type="date" class="form-control form-control-sm" value="{{ pl.period_start or '' }}">
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">Period End</label>
+      <input name="period_end" type="date" class="form-control form-control-sm" value="{{ pl.period_end or '' }}">
+    </div>
+
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">Total Hours</label>
+      <input name="hours" type="number" step="0.01" class="form-control form-control-sm" value="{{ pl.hours or 0 }}">
+      <div class="text-muted" style="font-size:0.8rem;">If Gross is blank, Gross will be computed as Hours × employee Pay rate.</div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">Gross (before vacation pay)</label>
+      <input name="regular_gross" type="number" step="0.01" class="form-control form-control-sm" value="{{ regular_gross }}">
+    </div>
+
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">Vacation Pay</label>
+      <input class="form-control form-control-sm" value="{{ (pl.vacation_pay or 0) | money }}" disabled>
+      <div class="text-muted" style="font-size:0.8rem;">Calculated automatically when Vacation Pay is enabled for the employee.</div>
+    </div>
+
+    <div class="col-12 mt-2">
+      <button class="btn btn-primary btn-sm" type="submit">Save Changes</button>
+      <a class="btn btn-outline-secondary btn-sm" href="{{ next_url }}">Cancel</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

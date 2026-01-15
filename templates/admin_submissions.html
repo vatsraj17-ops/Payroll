@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Submissions</h2>
+<div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">Owner submissions awaiting processing.</div>
+
+<div class="card card-accent">
+  <div class="card-body">
+    {% if submissions %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th>Employee</th>
+              <th>Period</th>
+              <th>Pay date</th>
+              <th class="text-end">Hours</th>
+              <th>Status</th>
+              <th style="width: 220px;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in submissions %}
+              <tr>
+                <td>{{ s.company.name if s.company else '' }}</td>
+                <td>{{ (s.employee.first_name ~ ' ' ~ s.employee.last_name).strip() if s.employee else '' }}</td>
+                <td>
+                  {% if s.period_start and s.period_end %}
+                    {{ s.period_start.strftime('%Y-%m-%d') }} to {{ s.period_end.strftime('%Y-%m-%d') }}
+                  {% elif s.period_start %}
+                    From {{ s.period_start.strftime('%Y-%m-%d') }}
+                  {% elif s.period_end %}
+                    To {{ s.period_end.strftime('%Y-%m-%d') }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>{{ s.pay_date.strftime('%Y-%m-%d') if s.pay_date else '' }}</td>
+                <td class="text-end">{{ '%.2f'|format(s.hours or 0) }}</td>
+                <td>
+                  {% if s.status == 'processed' %}
+                    <span class="badge text-bg-success">Processed</span>
+                  {% else %}
+                    <span class="badge text-bg-secondary">Submitted</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if s.status == 'processed' and s.payroll_line_id %}
+                    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('paystub_pdf', payroll_line_id=s.payroll_line_id) }}">Download paystub</a>
+                  {% else %}
+                    <form method="post" action="{{ url_for('admin_process_submission', submission_id=s.id) }}" style="display:inline;">
+                      <button class="btn btn-sm btn-primary">Process</button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="text-muted">No submissions.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
