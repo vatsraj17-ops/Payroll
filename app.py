@@ -24,6 +24,13 @@ LOGO_FOLDER = os.path.join(base_dir, 'static', 'logos')
 os.makedirs(LOGO_FOLDER, exist_ok=True)
 
 
+def _is_production() -> bool:
+    return (
+        (os.environ.get('FLASK_ENV') or '').strip().lower() == 'production'
+        or (os.environ.get('ENV') or '').strip().lower() == 'production'
+    )
+
+
 def _get_database_uri() -> str:
     """Resolve DB connection string.
 
@@ -38,6 +45,12 @@ def _get_database_uri() -> str:
         if uri.startswith('postgres://'):
             uri = 'postgresql://' + uri[len('postgres://'):]
         return uri
+
+    # In production, do not silently fall back to SQLite.
+    # This prevents confusing behavior on hosted platforms (multiple instances each get their own local SQLite DB).
+    if _is_production() and (os.environ.get('ALLOW_SQLITE_IN_PROD') or '').strip().lower() not in {'1', 'true', 'yes', 'on'}:
+        raise RuntimeError('DATABASE_URL must be set in production (Postgres).')
+
     return 'sqlite:///' + os.path.join(base_dir, 'payroll.db')
 
 
@@ -56,7 +69,7 @@ if _db_uri and not _db_uri.startswith('sqlite'):
     }
 
 # Cookie hardening in production (keep local dev working over http://)
-if (os.environ.get('FLASK_ENV') or '').lower() == 'production' or (os.environ.get('ENV') or '').lower() == 'production':
+if _is_production():
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     app.config['SESSION_COOKIE_SECURE'] = True
