@@ -15,6 +15,9 @@ payroll.db
 output/
 *.pdf
 
+# Local credential notes (do not commit)
+username = doadmin.txt
+
 # OS
 .DS_Store
 Thumbs.db
