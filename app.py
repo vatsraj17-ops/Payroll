@@ -28,7 +28,13 @@ def _is_production() -> bool:
     return (
         (os.environ.get('FLASK_ENV') or '').strip().lower() == 'production'
         or (os.environ.get('ENV') or '').strip().lower() == 'production'
+        or _is_hosted()
     )
+
+
+def _is_hosted() -> bool:
+    """Detect if running on a hosted platform (DigitalOcean App Platform sets PORT)."""
+    return bool((os.environ.get('PORT') or '').strip())
 
 
 def _get_database_uri() -> str:
@@ -46,10 +52,10 @@ def _get_database_uri() -> str:
             uri = 'postgresql://' + uri[len('postgres://'):]
         return uri
 
-    # In production, do not silently fall back to SQLite.
-    # This prevents confusing behavior on hosted platforms (multiple instances each get their own local SQLite DB).
-    if _is_production() and (os.environ.get('ALLOW_SQLITE_IN_PROD') or '').strip().lower() not in {'1', 'true', 'yes', 'on'}:
-        raise RuntimeError('DATABASE_URL must be set in production (Postgres).')
+    # On hosted platforms, do not silently fall back to SQLite.
+    # Multiple instances + ephemeral filesystem will cause inconsistent/vanishing data.
+    if _is_hosted() and (os.environ.get('ALLOW_SQLITE_IN_PROD') or '').strip().lower() not in {'1', 'true', 'yes', 'on'}:
+        raise RuntimeError('DATABASE_URL must be set (Postgres). Refusing to start with SQLite on a hosted platform.')
 
     return 'sqlite:///' + os.path.join(base_dir, 'payroll.db')
 
@@ -269,7 +275,18 @@ def money_filter(value):
 
 # Ensure tables are created at startup
 with app.app_context():
+    # Safe diagnostics (does not log secrets)
+    try:
+        app.logger.info('DATABASE_URL set: %s', bool((os.environ.get('DATABASE_URL') or '').strip()))
+    except Exception:
+        pass
+
     db.create_all()
+
+    try:
+        app.logger.info('DB dialect: %s', getattr(db.engine.dialect, 'name', 'unknown'))
+    except Exception:
+        pass
 
     # Ensure there is always at least one admin user (bootstrap from env)
     #
