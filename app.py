@@ -8,7 +8,7 @@ from models import db, Company, Employee, PayrollLine, User, PayrollSubmission
 from calc import calculate_payroll
 from sqlalchemy import func
 import random
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 from functools import wraps
 from dotenv import load_dotenv
 
@@ -147,6 +147,76 @@ def _update_env_file(updates: dict[str, str]) -> None:
         f.write('\n'.join(out).rstrip() + '\n')
 
 
+def _request_full_path() -> str:
+    """Return request.full_path without a trailing '?' when no query string."""
+    try:
+        full_path = request.full_path or '/'
+        if full_path.endswith('?'):
+            return full_path[:-1]
+        return full_path
+    except Exception:
+        return '/'
+
+
+def _sanitize_next_url(next_url: str, default: str = '/') -> str:
+    """Allow only local redirect targets.
+
+    Prevents open redirects like: /login?next=https://evil.com
+    """
+    candidate = (next_url or '').strip()
+    if not candidate:
+        return default
+
+    try:
+        parts = urlsplit(candidate)
+        if parts.scheme or parts.netloc:
+            return default
+        if not (parts.path or '').startswith('/'):
+            return default
+        return candidate
+    except Exception:
+        return default
+
+
+def _is_obvious_secret_probe(path: str) -> bool:
+    """Return True for paths that are almost certainly credential/config probes.
+
+    Keep this conservative to avoid blocking real app routes.
+    """
+    p = (path or '').strip().lower()
+    if not p:
+        return False
+
+    # Allow the standard well-known path (ACME challenges, etc.)
+    if p.startswith('/.well-known/'):
+        return False
+
+    sensitive_prefixes = (
+        '/.git',
+        '/.aws',
+        '/.docker',
+        '/.terraform',
+    )
+    if p.startswith(sensitive_prefixes):
+        return True
+
+    sensitive_exact = {
+        '/.env',
+        '/.env.local',
+        '/.env.production',
+        '/.env.development',
+        '/.env.staging',
+        '/.env.example',
+        '/terraform.tfstate',
+        '/terraform.tfstate.backup',
+        '/docker-compose.yml',
+        '/docker-compose.yaml',
+        '/dockerfile',
+        '/phpinfo.php',
+    }
+    return p in sensitive_exact
+
+
 def is_logged_in() -> bool:
     return bool(session.get('user_id'))
 
@@ -173,7 +243,7 @@ def require_admin(view_func):
     @wraps(view_func)
     def _wrapped(*args, **kwargs):
         if not is_logged_in():
-            return redirect(url_for('login', next=request.full_path))
+            return redirect(url_for('login', next=_request_full_path()))
         if not _is_admin_session():
             abort(403)
         return view_func(*args, **kwargs)
@@ -184,7 +254,7 @@ def require_login(view_func):
     @wraps(view_func)
     def _wrapped(*args, **kwargs):
         if not is_logged_in():
-            return redirect(url_for('login', next=request.full_path))
+            return redirect(url_for('login', next=_request_full_path()))
         return view_func(*args, **kwargs)
     return _wrapped
 
@@ -194,16 +264,22 @@ def _require_login():
     # Allow login page and static assets without authentication.
     if request.endpoint in {'login', 'static'}:
         return None
+    # Drop obvious secret-probe requests early.
+    if _is_obvious_secret_probe(request.path):
+        abort(404)
+    # If no route matched, let Flask return a real 404 (do not redirect to login).
+    if request.endpoint is None:
+        return None
     if request.path.startswith('/static/'):
         return None
     if not is_logged_in():
-        return redirect(url_for('login', next=request.full_path))
+        return redirect(url_for('login', next=_request_full_path()))
     return None
 
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    next_url = (request.args.get('next') or '').strip() or '/'
+    next_url = _sanitize_next_url(request.args.get('next') or '/', default='/')
     if request.method == 'POST':
         username = (request.form.get('username') or '').strip()
         password = (request.form.get('password') or '').strip()
