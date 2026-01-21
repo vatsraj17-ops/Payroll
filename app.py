@@ -1587,21 +1587,22 @@ def _generate_paystubs_pdf(lines: list[PayrollLine]) -> bytes:
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
     from reportlab.lib import colors
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_LEFT, TA_RIGHT
+    from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
     styles = getSampleStyleSheet()
-    company_name_style = ParagraphStyle('CompanyName', parent=styles['Normal'], fontSize=10, leading=12, alignment=TA_LEFT)
-    header_value = ParagraphStyle('HeaderValue', parent=styles['Normal'], fontSize=9, alignment=TA_LEFT, leading=11)
-    header_value_right = ParagraphStyle('HeaderValueRight', parent=styles['Normal'], fontSize=9, alignment=TA_RIGHT, leading=11)
-    section_label = ParagraphStyle('SectionLabel', parent=styles['Normal'], fontSize=9, alignment=TA_LEFT, leading=11)
-    section_value = ParagraphStyle('SectionValue', parent=styles['Normal'], fontSize=9, alignment=TA_LEFT, leading=11)
-    number_style = ParagraphStyle('Number', parent=styles['Normal'], fontSize=9, alignment=TA_RIGHT, leading=11)
-    number_bold = ParagraphStyle('NumberBold', parent=styles['Normal'], fontSize=10, alignment=TA_RIGHT, leading=12)
-    header_num = ParagraphStyle('HeaderNum', parent=styles['Normal'], fontSize=9, alignment=TA_RIGHT, leading=11)
-    net_pay_label_style = ParagraphStyle('NetPayLabel', parent=styles['Normal'], fontSize=11, alignment=TA_RIGHT, leading=13)
-    net_pay_amount_style = ParagraphStyle('NetPayAmount', parent=styles['Normal'], fontSize=12, alignment=TA_RIGHT, leading=14)
+    company_name_style = ParagraphStyle('CompanyName', parent=styles['Normal'], fontSize=11, leading=13, alignment=TA_LEFT)
+    header_value = ParagraphStyle('HeaderValue', parent=styles['Normal'], fontSize=10, alignment=TA_LEFT, leading=12)
+    header_value_right = ParagraphStyle('HeaderValueRight', parent=styles['Normal'], fontSize=10, alignment=TA_RIGHT, leading=12)
+    section_label = ParagraphStyle('SectionLabel', parent=styles['Normal'], fontSize=10, alignment=TA_LEFT, leading=12)
+    section_value = ParagraphStyle('SectionValue', parent=styles['Normal'], fontSize=10, alignment=TA_LEFT, leading=12)
+    number_style = ParagraphStyle('Number', parent=styles['Normal'], fontSize=10, alignment=TA_RIGHT, leading=12)
+    number_bold = ParagraphStyle('NumberBold', parent=styles['Normal'], fontSize=11, alignment=TA_RIGHT, leading=13)
+    header_num = ParagraphStyle('HeaderNum', parent=styles['Normal'], fontSize=10, alignment=TA_RIGHT, leading=12)
+    net_pay_label_style = ParagraphStyle('NetPayLabel', parent=styles['Normal'], fontSize=12, alignment=TA_RIGHT, leading=14)
+    net_pay_amount_style = ParagraphStyle('NetPayAmount', parent=styles['Normal'], fontSize=13, alignment=TA_RIGHT, leading=15)
+    title_style = ParagraphStyle('PaystubTitle', parent=styles['Normal'], fontSize=12, alignment=TA_CENTER, leading=14)
     elements = []
 
     def _fmt_date(d):
@@ -1711,6 +1712,10 @@ def _generate_paystubs_pdf(lines: list[PayrollLine]) -> bytes:
             taxes_ytd = float(ytd_cpp + ytd_cpp2 + ytd_ei + ytd_taxes)
 
             net_pay = float(pl.net or 0.0)
+
+            # Title: centered at the top
+            elements.append(Paragraph('Earning Statement', title_style))
+            elements.append(Spacer(1, 0.12 * inch))
 
             # Header: EMPLOYER (left) + PAY PERIOD (right)
             employer_block = [
