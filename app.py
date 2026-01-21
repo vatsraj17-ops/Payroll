@@ -2006,6 +2006,7 @@ def reports_roe_pdf():
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
     from reportlab.lib import colors
     from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 
     form = request.form if request.method == 'POST' else request.args
     company_id = form.get('company_id')
@@ -2028,40 +2029,108 @@ def reports_roe_pdf():
     styles = getSampleStyleSheet()
     elements = []
 
-    elements.append(Paragraph('Record of Employment (ROE) - Report', styles['Title']))
-    elements.append(Spacer(1, 0.1 * inch))
+    header_label = styles['Normal'].clone('header_label')
+    header_label.fontSize = 9
+    header_label.leading = 11
+    header_label.alignment = TA_LEFT
 
-    data = [['Employee', 'SIN', 'Hire Date', 'Period Start', 'Period End', 'Pay Date', 'Gross', 'Net']]
-    for pl in lines:
-        emp = pl.employee
-        data.append([
-            f"{emp.first_name} {emp.last_name}",
-            emp.sin or '',
-            str(emp.hire_date) if emp.hire_date else '',
-            str(pl.period_start) if pl.period_start else '',
-            str(pl.period_end) if pl.period_end else '',
-            str(pl.pay_date) if pl.pay_date else '',
-            f"${pl.gross:,.2f}",
-            f"${pl.net:,.2f}",
-        ])
+    header_value = styles['Normal'].clone('header_value')
+    header_value.fontSize = 9
+    header_value.leading = 11
+    header_value.alignment = TA_LEFT
 
-    if len(data) == 1:
+    header_value_right = styles['Normal'].clone('header_value_right')
+    header_value_right.fontSize = 9
+    header_value_right.leading = 11
+    header_value_right.alignment = TA_RIGHT
+
+    if len(lines) == 1:
+        emp = lines[0].employee
+        comp = emp.company if emp else None
+    elif len(lines) > 1:
+        emp = lines[0].employee
+        comp = emp.company if emp else None
+    else:
+        emp = None
+        comp = None
+
+    if not lines:
         elements.append(Paragraph('No payroll lines match the filters.', styles['Normal']))
     else:
-        # include Total Remittance column in ROE
-        # add header for Total Remittance and include value per payroll line
-        data[0].append('Total Remittance')
-        for i in range(1, len(data)):
-            # append total_remittance for each row (index aligns with lines order)
-            # rows were built in same order as 'lines'
-            # compute index into lines: i-1
-            pl_row = lines[i-1]
-            data[i].append(f"${pl_row.total_remittance:,.2f}")
-        table = Table(data, colWidths=[1.4*inch, 1*inch, 0.9*inch, 0.9*inch, 0.9*inch, 0.9*inch, 0.9*inch, 0.9*inch, 0.9*inch])
+        company_name = (comp.name if comp and comp.name else 'Company').strip() or 'Company'
+        company_address = (comp.address if comp and comp.address else '').strip()
+        company_bn = (comp.business_number if comp and comp.business_number else '').strip()
+
+        employee_name = (f"{emp.first_name} {emp.last_name}" if emp else 'Employee').strip()
+        employee_address = (emp.address or '').strip() if emp else ''
+        employee_sin = (emp.sin or '').strip() if emp else ''
+
+        left_block = [
+            Paragraph('<b>EMPLOYER</b>', header_label),
+            Paragraph(company_name, header_value),
+        ]
+        if company_address:
+            for line in str(company_address).replace('\r', '\n').split('\n'):
+                line = line.strip()
+                if line:
+                    left_block.append(Paragraph(line, header_value))
+        if company_bn:
+            left_block.append(Paragraph(f"Business Number: {company_bn}", header_value))
+
+        right_block = [
+            Paragraph('<b>EMPLOYEE</b>', header_label),
+            Paragraph(employee_name, header_value_right),
+        ]
+        if employee_address:
+            for line in str(employee_address).replace('\r', '\n').split('\n'):
+                line = line.strip()
+                if line:
+                    right_block.append(Paragraph(line, header_value_right))
+        if employee_sin:
+            right_block.append(Paragraph(f"SIN: {employee_sin}", header_value_right))
+
+        header_tbl = Table([[left_block, right_block]], colWidths=[doc.width * 0.55, doc.width * 0.45])
+        header_tbl.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        elements.append(header_tbl)
+        elements.append(Spacer(1, 0.15 * inch))
+
+        data = [[
+            'Pay Date',
+            'Total Income',
+            'CPP (Emp)',
+            'EI (Emp)',
+            'Taxes',
+            'CPP (Empr)',
+            'EI (Empr)',
+            'Deductions',
+        ]]
+        for pl in lines:
+            taxes = float(pl.federal_tax or 0.0) + float(pl.ontario_tax or 0.0)
+            deductions = float(pl.total_employee_deductions or 0.0)
+            data.append([
+                str(pl.pay_date) if pl.pay_date else '',
+                f"${pl.gross:,.2f}",
+                f"${float(pl.cpp_employee or 0.0):,.2f}",
+                f"${float(pl.ei_employee or 0.0):,.2f}",
+                f"${taxes:,.2f}",
+                f"${float(pl.cpp2_employer or 0.0) + float(pl.cpp_employee or 0.0):,.2f}",
+                f"${float(pl.ei_employer or 0.0):,.2f}",
+                f"${deductions:,.2f}",
+            ])
+
+        table = Table(
+            data,
+            colWidths=[1.0*inch, 1.1*inch, 0.95*inch, 0.95*inch, 0.9*inch, 1.0*inch, 0.95*inch, 1.0*inch]
+        )
         table.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
-            ('GRID', (0,0), (-1,-1), 0.25, colors.grey),
-            ('ALIGN', (6,1), (7,-1), 'RIGHT'),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
+            ('ALIGN', (1, 1), (-1, -1), 'RIGHT'),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
         ]))
         elements.append(table)
 
