@@ -52,6 +52,34 @@ def _get_database_uri() -> str:
             uri = 'postgresql://' + uri[len('postgres://'):]
         return uri
 
+    def _env_first(*keys: str) -> str:
+        for key in keys:
+            value = (os.environ.get(key) or '').strip()
+            if value:
+                return value
+        return ''
+
+    def _build_postgres_url_from_parts() -> str:
+        host = _env_first('PGHOST', 'POSTGRES_HOST', 'POSTGRESQL_HOST')
+        user = _env_first('PGUSER', 'POSTGRES_USER', 'POSTGRESQL_USER')
+        password = _env_first('PGPASSWORD', 'POSTGRES_PASSWORD', 'POSTGRESQL_PASSWORD')
+        dbname = _env_first('PGDATABASE', 'POSTGRES_DB', 'POSTGRESQL_DATABASE')
+        port = _env_first('PGPORT', 'POSTGRES_PORT', 'POSTGRESQL_PORT') or '5432'
+        sslmode = _env_first('PGSSLMODE', 'POSTGRES_SSLMODE', 'POSTGRESQL_SSLMODE') or ''
+
+        if not (host and user and password and dbname):
+            return ''
+
+        base = f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
+        if sslmode:
+            base = f"{base}?sslmode={sslmode}"
+        return base
+
+    # If DATABASE_URL is missing, try to assemble from common Postgres env vars.
+    parts_uri = _build_postgres_url_from_parts()
+    if parts_uri:
+        return parts_uri
+
     # On hosted platforms, do not silently fall back to SQLite.
     # Multiple instances + ephemeral filesystem will cause inconsistent/vanishing data.
     if _is_hosted() and (os.environ.get('ALLOW_SQLITE_IN_PROD') or '').strip().lower() not in {'1', 'true', 'yes', 'on'}:
