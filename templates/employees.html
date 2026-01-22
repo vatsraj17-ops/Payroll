@@ -1,9 +1,21 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Employee</h2>
-<div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">Employee Personal Details</div>
+<h2>Employee / Sub-contract</h2>
+<div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">Add payroll employees or sub-contracts.</div>
 <form method="post" class="mb-4">
   <div class="row g-2">
+    <div class="col-12 col-lg-4">
+      <label class="form-label" style="font-size:0.9rem;">Worker Type</label>
+      <select name="worker_type" id="worker_type" class="form-select form-select-sm">
+        <option value="employee" selected>Employee</option>
+        <option value="subcontract">Sub-contract</option>
+      </select>
+    </div>
+    <div class="col-12 col-lg-8 d-flex align-items-end">
+      <div class="text-muted" style="font-size:0.85rem;">Select Employee for payroll or Sub-contract for separate tracking.</div>
+    </div>
+
+    <div id="employee_fields" class="row g-2">
     <div class="col-12 col-lg-6">
       <label class="form-label" style="font-size:0.9rem;">Name</label>
       <input name="name" class="form-control form-control-sm" placeholder="Name" required>
@@ -55,9 +67,72 @@
       <label class="form-label" style="font-size:0.9rem;">Pay rate</label>
       <input name="pay_rate" class="form-control form-control-sm" placeholder="Pay rate" required>
     </div>
+    </div>
+
+    <div id="subcontract_fields" class="row g-2" style="display:none;">
+      <div class="col-12 col-lg-6">
+        <label class="form-label" style="font-size:0.9rem;">Company (Employer)</label>
+        <select name="company_id" class="form-select form-select-sm">
+          <option value="">-- Select company --</option>
+          {% for c in companies %}
+            <option value="{{ c.id }}">{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-lg-6">
+        <label class="form-label" style="font-size:0.9rem;">Sub-contract Company Name</label>
+        <input name="contractor_company_name" class="form-control form-control-sm" placeholder="Company name">
+      </div>
+      <div class="col-12 col-lg-6">
+        <label class="form-label" style="font-size:0.9rem;">Address</label>
+        <input name="contractor_address" class="form-control form-control-sm" placeholder="Address">
+      </div>
+      <div class="col-12 col-lg-6">
+        <label class="form-label" style="font-size:0.9rem;">Tax Number</label>
+        <input name="tax_number" class="form-control form-control-sm" placeholder="Tax number">
+      </div>
+      <div class="col-12 col-lg-6">
+        <label class="form-label" style="font-size:0.9rem;">Contract Rate</label>
+        <input name="contract_rate" class="form-control form-control-sm" placeholder="Contract rate">
+      </div>
+      <div class="col-12 col-lg-6 d-flex align-items-end">
+        <div class="text-muted" style="font-size:0.85rem;">GST/HST included at 13%.</div>
+      </div>
+    </div>
+
     <div class="col-12 mt-2">
       <button class="btn btn-primary btn-sm">Add</button>
     </div>
   </div>
 </form>
+
+<script>
+  (function() {
+    const workerType = document.getElementById('worker_type');
+    const employeeFields = document.getElementById('employee_fields');
+    const subcontractFields = document.getElementById('subcontract_fields');
+
+    const employeeRequired = employeeFields.querySelectorAll('[name="name"], [name="company_id"], [name="address"], [name="sin"], [name="hire_date"], [name="payroll_frequency"], [name="pay_rate"]');
+    const subcontractRequired = subcontractFields.querySelectorAll('[name="company_id"], [name="contractor_company_name"], [name="contractor_address"], [name="contract_rate"]');
+
+    function toggleFields() {
+      const isSub = workerType.value === 'subcontract';
+      employeeFields.style.display = isSub ? 'none' : '';
+      subcontractFields.style.display = isSub ? '' : 'none';
+
+      employeeRequired.forEach(el => el.required = !isSub);
+      subcontractRequired.forEach(el => el.required = isSub);
+
+      employeeFields.querySelectorAll('input, select, textarea').forEach(el => {
+        el.disabled = isSub;
+      });
+      subcontractFields.querySelectorAll('input, select, textarea').forEach(el => {
+        el.disabled = !isSub;
+      });
+    }
+
+    workerType.addEventListener('change', toggleFields);
+    toggleFields();
+  })();
+</script>
 {% endblock %}

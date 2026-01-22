@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Sub-contracts</h2>
+<div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">Select a company, then click Filter to load sub-contracts.</div>
+
+<form method="get" action="/manage/subcontracts" class="mb-3">
+  <input type="hidden" name="run" value="1">
+  <div class="row g-2">
+    <div class="col-12 col-md-6">
+      <label class="form-label" style="font-size:0.9rem;">Company</label>
+      <select name="company_id" class="form-select form-select-sm">
+        <option value="">-- Company --</option>
+        {% for c in companies %}
+          <option value="{{ c.id }}" {% if selected_company_id and selected_company_id|int == c.id %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+      <div class="text-muted" style="font-size:0.8rem;">Optional: limits sub-contracts shown below.</div>
+    </div>
+    <div class="col-12 col-md-4" style="display:flex; align-items:end;">
+      <div style="width:100%;">
+        <label class="form-label" style="font-size:0.9rem; opacity:0;">Filter</label>
+        <button class="btn btn-primary btn-sm w-100" type="submit">Filter</button>
+      </div>
+    </div>
+  </div>
+</form>
+
+{% if not run %}
+  <p class="text-muted">No sub-contracts shown. Use the dropdown and click <strong>Filter</strong> to load.</p>
+{% elif subcontractors and subcontractors|length > 0 %}
+  <table class="table table-sm align-middle">
+    <thead>
+      <tr>
+        <th>Sub-contract Company</th>
+        <th>Company</th>
+        <th>Address</th>
+        <th>Tax Number</th>
+        <th class="text-end">Contract Rate</th>
+        <th class="text-end">GST/HST (13%)</th>
+        <th class="text-end">Total</th>
+        <th class="text-end">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in subcontractors %}
+        {% set gst = (s.contract_rate or 0) * (s.gst_rate or 0.13) %}
+        {% set total = (s.contract_rate or 0) + gst %}
+        <tr>
+          <td class="fw-semibold">{{ s.contractor_company_name }}</td>
+          <td>{{ s.company.name if s.company else '' }}</td>
+          <td>{{ s.address or '' }}</td>
+          <td>{{ s.tax_number or '' }}</td>
+          <td class="text-end">{{ (s.contract_rate or 0) | money }}</td>
+          <td class="text-end">{{ gst | money }}</td>
+          <td class="text-end">{{ total | money }}</td>
+          <td class="text-end">
+            <a class="btn btn-outline-primary btn-sm" href="/subcontracts/{{ s.id }}/edit">Edit</a>
+            <form method="post" action="/subcontracts/{{ s.id }}/delete" style="display:inline;" onsubmit="return confirm('Delete this sub-contract?');">
+              <button class="btn btn-outline-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p class="text-muted">No sub-contracts match the selected filters.</p>
+{% endif %}
+{% endblock %}

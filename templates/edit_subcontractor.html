@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Edit Sub-contract</h2>
+<form method="post" class="row g-2">
+  <div class="col-md-6">
+    <label class="form-label" style="font-size:0.9rem;">Company (Employer)</label>
+    <select name="company_id" class="form-select form-select-sm">
+      {% for c in companies %}
+        <option value="{{ c.id }}" {% if subcontractor.company_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label" style="font-size:0.9rem;">Sub-contract Company Name</label>
+    <input name="contractor_company_name" class="form-control form-control-sm" value="{{ subcontractor.contractor_company_name }}">
+  </div>
+  <div class="col-md-6 mt-2">
+    <label class="form-label" style="font-size:0.9rem;">Address</label>
+    <input name="contractor_address" class="form-control form-control-sm" value="{{ subcontractor.address }}">
+  </div>
+  <div class="col-md-3 mt-2">
+    <label class="form-label" style="font-size:0.9rem;">Tax Number</label>
+    <input name="tax_number" class="form-control form-control-sm" value="{{ subcontractor.tax_number }}">
+  </div>
+  <div class="col-md-3 mt-2">
+    <label class="form-label" style="font-size:0.9rem;">Contract Rate</label>
+    <input name="contract_rate" class="form-control form-control-sm" value="{{ subcontractor.contract_rate }}">
+  </div>
+  <div class="col-12 mt-2">
+    <button class="btn btn-primary">Save</button>
+  </div>
+</form>
+{% endblock %}

@@ -97,3 +97,16 @@ class PayrollSubmission(db.Model):
     company = db.relationship('Company', backref=db.backref('payroll_submissions', lazy=True))
     employee = db.relationship('Employee', backref=db.backref('payroll_submissions', lazy=True))
     payroll_line = db.relationship('PayrollLine', backref=db.backref('submission', uselist=False))
+
+
+class Subcontractor(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    contractor_company_name = db.Column(db.String(128), nullable=False)
+    address = db.Column(db.String(256), nullable=True)
+    tax_number = db.Column(db.String(32), nullable=True)
+    gst_rate = db.Column(db.Float, default=0.13)
+    contract_rate = db.Column(db.Float, default=0.0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    company = db.relationship('Company', backref=db.backref('subcontractors', lazy=True))

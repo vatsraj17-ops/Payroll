@@ -4,7 +4,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import os
 import datetime
 from flask_sqlalchemy import SQLAlchemy
-from models import db, Company, Employee, PayrollLine, User, PayrollSubmission
+from models import db, Company, Employee, PayrollLine, User, PayrollSubmission, Subcontractor
 from calc import calculate_payroll
 from sqlalchemy import func
 import random
@@ -632,6 +632,67 @@ def employees():
         cid = session.get('company_id')
         companies = Company.query.filter(Company.id == int(cid)).all() if cid else []
     if request.method == 'POST':
+        worker_type = (request.form.get('worker_type') or 'employee').strip().lower()
+        if worker_type == 'subcontract':
+            company_id_raw = (request.form.get('company_id') or '').strip()
+            contractor_company_name = (request.form.get('contractor_company_name') or '').strip()
+            address = (request.form.get('contractor_address') or '').strip()
+            tax_number = (request.form.get('tax_number') or '').strip()
+            contract_rate_raw = (request.form.get('contract_rate') or '').strip()
+
+            if _is_owner_session():
+                company_id_raw = str(session.get('company_id') or '').strip()
+
+            if not company_id_raw:
+                flash('Company is required.', 'danger')
+                return redirect(url_for('employees'))
+            if not contractor_company_name:
+                flash('Sub-contract company name is required.', 'danger')
+                return redirect(url_for('employees'))
+            if not address:
+                flash('Address is required.', 'danger')
+                return redirect(url_for('employees'))
+            if not contract_rate_raw:
+                flash('Contract rate is required.', 'danger')
+                return redirect(url_for('employees'))
+
+            try:
+                company_id = int(company_id_raw)
+            except Exception:
+                flash('Company selection is invalid.', 'danger')
+                return redirect(url_for('employees'))
+
+            allowed_company_ids = _allowed_company_ids_for_session()
+            if company_id not in allowed_company_ids:
+                abort(403)
+
+            if not db.session.get(Company, company_id):
+                flash('Selected company does not exist.', 'danger')
+                return redirect(url_for('employees'))
+
+            try:
+                contract_rate = float(contract_rate_raw)
+            except Exception:
+                flash('Contract rate must be a number.', 'danger')
+                return redirect(url_for('employees'))
+
+            if contract_rate < 0:
+                flash('Contract rate cannot be negative.', 'danger')
+                return redirect(url_for('employees'))
+
+            sub = Subcontractor(
+                company_id=company_id,
+                contractor_company_name=contractor_company_name,
+                address=address,
+                tax_number=tax_number,
+                gst_rate=0.13,
+                contract_rate=contract_rate,
+            )
+            db.session.add(sub)
+            db.session.commit()
+            flash('Sub-contract added.', 'success')
+            return redirect(url_for('employees'))
+
         # Accept a single Name field on the form and store it in first_name
         # (keep last_name blank for compatibility with existing model/templates)
         name = (request.form.get('name') or '').strip()
@@ -759,6 +820,124 @@ def manage_employees():
         selected_employee_id=employee_id,
         run=run,
     )
+
+
+@app.route('/manage/subcontracts', methods=['GET'])
+@require_login
+def manage_subcontracts():
+    if _is_admin_session():
+        companies = Company.query.order_by(Company.name).all()
+    else:
+        cid = session.get('company_id')
+        companies = Company.query.filter(Company.id == int(cid)).order_by(Company.name).all() if cid else []
+
+    run = (request.args.get('run') or '').strip()
+    company_id = (request.args.get('company_id') or '').strip()
+
+    if _is_owner_session():
+        company_id = str(session.get('company_id') or '').strip()
+
+    subs = []
+    if run == '1':
+        q = Subcontractor.query
+        if company_id:
+            q = q.filter(Subcontractor.company_id == int(company_id))
+        subs = q.order_by(Subcontractor.contractor_company_name.asc(), Subcontractor.id.asc()).all()
+
+    return render_template(
+        'manage_subcontracts.html',
+        companies=companies,
+        subcontractors=subs,
+        selected_company_id=company_id,
+        run=run,
+    )
+
+
+@app.route('/subcontracts/<int:sub_id>/edit', methods=['GET', 'POST'])
+@require_login
+def edit_subcontractor(sub_id: int):
+    sub = db.session.get(Subcontractor, sub_id)
+    if not sub:
+        abort(404)
+
+    if not _is_admin_session():
+        company_id = session.get('company_id')
+        if not company_id or sub.company_id != int(company_id):
+            abort(403)
+
+    if _is_admin_session():
+        companies = Company.query.order_by(Company.name).all()
+    else:
+        cid = session.get('company_id')
+        companies = Company.query.filter(Company.id == int(cid)).order_by(Company.name).all() if cid else []
+
+    if request.method == 'POST':
+        company_id_raw = (request.form.get('company_id') or '').strip()
+        contractor_company_name = (request.form.get('contractor_company_name') or '').strip()
+        address = (request.form.get('contractor_address') or '').strip()
+        tax_number = (request.form.get('tax_number') or '').strip()
+        contract_rate_raw = (request.form.get('contract_rate') or '').strip()
+
+        if _is_owner_session():
+            company_id_raw = str(session.get('company_id') or '').strip()
+
+        try:
+            company_id = int(company_id_raw) if company_id_raw else None
+        except Exception:
+            company_id = None
+
+        if not company_id:
+            flash('Company is required.', 'danger')
+            return render_template('edit_subcontractor.html', subcontractor=sub, companies=companies)
+
+        allowed_company_ids = _allowed_company_ids_for_session()
+        if company_id not in allowed_company_ids:
+            abort(403)
+
+        if not contractor_company_name:
+            flash('Sub-contract company name is required.', 'danger')
+            return render_template('edit_subcontractor.html', subcontractor=sub, companies=companies)
+
+        if not address:
+            flash('Address is required.', 'danger')
+            return render_template('edit_subcontractor.html', subcontractor=sub, companies=companies)
+
+        try:
+            contract_rate = float(contract_rate_raw)
+        except Exception:
+            flash('Contract rate must be a number.', 'danger')
+            return render_template('edit_subcontractor.html', subcontractor=sub, companies=companies)
+
+        if contract_rate < 0:
+            flash('Contract rate cannot be negative.', 'danger')
+            return render_template('edit_subcontractor.html', subcontractor=sub, companies=companies)
+
+        sub.company_id = company_id
+        sub.contractor_company_name = contractor_company_name
+        sub.address = address
+        sub.tax_number = tax_number
+        sub.contract_rate = contract_rate
+        db.session.commit()
+        flash('Sub-contract updated.', 'success')
+        return redirect(url_for('manage_subcontracts', run='1', company_id=company_id))
+
+    return render_template('edit_subcontractor.html', subcontractor=sub, companies=companies)
+
+
+@app.route('/subcontracts/<int:sub_id>/delete', methods=['POST'])
+@require_login
+def delete_subcontractor(sub_id: int):
+    sub = db.session.get(Subcontractor, sub_id)
+    if not sub:
+        abort(404)
+    if not _is_admin_session():
+        company_id = session.get('company_id')
+        if not company_id or sub.company_id != int(company_id):
+            abort(403)
+    db.session.delete(sub)
+    db.session.commit()
+    flash('Sub-contract deleted.', 'success')
+    return redirect(url_for('manage_subcontracts', run='1'))
 
 
 @app.route('/employees/<int:employee_id>/delete', methods=['POST'])
