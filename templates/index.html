@@ -15,33 +15,20 @@
 	<div class="col-12 col-lg-6">
 		<div class="card card-accent">
 			<div class="card-body">
-				<div style="font-weight:700; font-size:1.1rem; margin-bottom:.5rem;">Payroll</div>
+				<div style="font-weight:700; font-size:1.1rem; margin-bottom:.5rem;">Run Payroll</div>
 				<div class="row">
-					<div class="col-6">
-						<div class="text-muted" style="font-size:0.85rem;">Core</div>
-						<ul class="mb-2" style="padding-left:1.1rem;">
+					<div class="col-12">
+						<ul class="mb-0" style="padding-left:1.1rem;">
 							{% if role == 'admin' %}
 								<li><a class="accent-link" href="/companies">Company</a></li>
-							{% endif %}
-							<li><a class="accent-link" href="/employees">Employee</a></li>
-							{% if role == 'admin' %}
+								<li><a class="accent-link" href="/employees">Employee</a></li>
 								<li><a class="accent-link" href="/data-entry">Data Entry</a></li>
 								<li><a class="accent-link" href="/reports">Reports</a></li>
 							{% elif role == 'owner' %}
-								<li><a class="accent-link" href="/owner/payroll">Payroll</a></li>
-							{% endif %}
-						</ul>
-					</div>
-					<div class="col-6">
-						<div class="text-muted" style="font-size:0.85rem;">Edit / Manage</div>
-						<ul class="mb-0" style="padding-left:1.1rem;">
-							{% if role == 'admin' %}
-								<li><a class="accent-link" href="/manage/companies">Edit Company</a></li>
-								<li><a class="accent-link" href="/manage/employees">Edit Employee</a></li>
-								<li><a class="accent-link" href="/manage/data">Edit Data</a></li>
-								<li><a class="accent-link" href="/admin/submissions">Submissions</a></li>
+								<li><a class="accent-link" href="/employees">Employee</a></li>
+								<li><a class="accent-link" href="/owner/payroll">Submit Payroll</a></li>
 							{% else %}
-								<li><a class="accent-link" href="/manage/employees">Edit Employee</a></li>
+								<li><a class="accent-link" href="/employees">Employee</a></li>
 							{% endif %}
 						</ul>
 					</div>
@@ -53,31 +40,12 @@
 	<div class="col-12 col-lg-6">
 		<div class="card card-accent">
 			<div class="card-body">
-				<div style="font-weight:700; font-size:1.1rem; margin-bottom:.5rem;">Sub-contract</div>
-				<div class="row">
-					<div class="col-6">
-						<div class="text-muted" style="font-size:0.85rem;">Core</div>
-						<ul class="mb-2" style="padding-left:1.1rem;">
-							{% if role == 'admin' %}
-								<li><a class="accent-link" href="/companies">Company</a></li>
-							{% endif %}
-							<li><a class="accent-link" href="/manage/subcontracts">Sub-contractor</a></li>
-							<li><a class="accent-link" href="/manage/subcontracts?run=1">Earnings</a></li>
-							{% if role == 'admin' %}
-								<li><a class="accent-link" href="/reports">Reports</a></li>
-							{% endif %}
-						</ul>
-					</div>
-					<div class="col-6">
-						<div class="text-muted" style="font-size:0.85rem;">Edit / Manage</div>
-						<ul class="mb-0" style="padding-left:1.1rem;">
-							<li><a class="accent-link" href="/manage/subcontracts">Edit Sub-contract</a></li>
-							{% if role == 'admin' %}
-								<li><a class="accent-link" href="/reports">Sub-contract Reports</a></li>
-							{% endif %}
-						</ul>
-					</div>
-				</div>
+				<div style="font-weight:700; font-size:1.1rem; margin-bottom:.5rem;">Expenses &amp; Bills</div>
+				<ul class="mb-0" style="padding-left:1.1rem;">
+					<li><a class="accent-link" href="/subcontracts/new">New Supplier</a></li>
+					<li><a class="accent-link" href="/subcontracts/bills">Pay Bills</a></li>
+					<li><a class="accent-link" href="/subcontracts/reports">Reports</a></li>
+				</ul>
 			</div>
 		</div>
 	</div>

@@ -110,3 +110,19 @@ class Subcontractor(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     company = db.relationship('Company', backref=db.backref('subcontractors', lazy=True))
+
+
+class SubcontractBill(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    subcontractor_id = db.Column(db.Integer, db.ForeignKey('subcontractor.id'), nullable=False)
+    bill_date = db.Column(db.Date, nullable=False)
+    description = db.Column(db.String(256), nullable=True)
+    amount = db.Column(db.Float, default=0.0)
+    gst_rate = db.Column(db.Float, default=0.13)
+    gst_amount = db.Column(db.Float, default=0.0)
+    total = db.Column(db.Float, default=0.0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    company = db.relationship('Company', backref=db.backref('subcontract_bills', lazy=True))
+    subcontractor = db.relationship('Subcontractor', backref=db.backref('bills', lazy=True))

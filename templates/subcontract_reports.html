@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Subcontract Reports</h2>
+<div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">View subcontract expenses separately from payroll.</div>
+
+<form method="get" action="/subcontracts/reports" class="mb-4">
+  <input type="hidden" name="run" value="1">
+  <div class="row g-2">
+    {% if session.get('role') == 'admin' %}
+      <div class="col-12 col-md-4">
+        <label class="form-label" style="font-size:0.9rem;">Company</label>
+        <select name="company_id" class="form-select form-select-sm">
+          <option value="">-- Company --</option>
+          {% for c in companies %}
+            <option value="{{ c.id }}" {% if selected_company_id and selected_company_id|int == c.id %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    {% endif %}
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">Supplier</label>
+      <select name="subcontractor_id" class="form-select form-select-sm">
+        <option value="">-- Supplier --</option>
+        {% for s in subcontractors %}
+          <option value="{{ s.id }}" {% if selected_subcontractor_id and selected_subcontractor_id|int == s.id %}selected{% endif %}>{{ s.contractor_company_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-2">
+      <label class="form-label" style="font-size:0.9rem;">From</label>
+      <input name="date_from" type="date" class="form-control form-control-sm" value="{{ selected_date_from }}">
+    </div>
+    <div class="col-12 col-md-2">
+      <label class="form-label" style="font-size:0.9rem;">To</label>
+      <input name="date_to" type="date" class="form-control form-control-sm" value="{{ selected_date_to }}">
+    </div>
+    <div class="col-12 col-md-3">
+      <button class="btn btn-primary btn-sm w-100" type="submit">View</button>
+    </div>
+  </div>
+</form>
+
+{% if run != '1' %}
+  <p class="text-muted">Select filters to load subcontract reports.</p>
+{% elif bills and bills|length > 0 %}
+  <div class="d-flex gap-3 flex-wrap mb-2">
+    <div><span class="text-muted">Subtotal:</span> <strong>{{ totals.amount | money }}</strong></div>
+    <div><span class="text-muted">GST/HST:</span> <strong>{{ totals.gst | money }}</strong></div>
+    <div><span class="text-muted">Total:</span> <strong>{{ totals.total | money }}</strong></div>
+  </div>
+  <table class="table table-sm align-middle">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Supplier</th>
+        <th>Description</th>
+        <th class="text-end">Amount</th>
+        <th class="text-end">GST/HST</th>
+        <th class="text-end">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in bills %}
+        <tr>
+          <td>{{ b.bill_date }}</td>
+          <td>{{ b.subcontractor.contractor_company_name if b.subcontractor else '' }}</td>
+          <td>{{ b.description or '' }}</td>
+          <td class="text-end">{{ (b.amount or 0) | money }}</td>
+          <td class="text-end">{{ (b.gst_amount or 0) | money }}</td>
+          <td class="text-end">{{ (b.total or 0) | money }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p class="text-muted">No subcontract bills match the selected filters.</p>
+{% endif %}
+{% endblock %}

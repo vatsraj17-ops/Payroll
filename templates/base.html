@@ -64,40 +64,45 @@
       <div class="d-flex gap-2 justify-content-center flex-wrap">
         <div class="nav-card"><a href="/">Home</a></div>
         {% if role == 'admin' %}
-          <div class="nav-card"><a href="/companies">Company</a></div>
-          <div class="nav-card"><a href="/employees">Employee</a></div>
-          <div class="nav-card"><a href="/manage/subcontracts">Sub-contracts</a></div>
-          <div class="nav-card"><a href="/data-entry">Data Entry</a></div>
-          <div class="nav-card"><a href="/reports">Reports</a></div>
+          <div class="nav-card"><a href="/data-entry">Run Payroll</a></div>
         {% elif role == 'owner' %}
-          <div class="nav-card"><a href="/employees">Employee</a></div>
-          <div class="nav-card"><a href="/manage/subcontracts">Sub-contracts</a></div>
-          <div class="nav-card"><a href="/owner/payroll">Payroll</a></div>
+          <div class="nav-card"><a href="/owner/payroll">Run Payroll</a></div>
         {% else %}
-          <div class="nav-card"><a href="/employees">Employee</a></div>
+          <div class="nav-card"><a href="/employees">Run Payroll</a></div>
         {% endif %}
+        <div class="nav-card"><a href="/subcontracts/bills">Expenses &amp; Bills</a></div>
       </div>
     </div>
     <div class="container" style="flex:1 0 auto; max-width: 1100px;">
       <div class="row">
         <div class="col-12 col-md-3 mb-3">
           <div style="background:#C3C3C3; border-left:4px solid #B0151A; border-radius:6px; padding:1rem;">
-            <div style="color:#B0151A; font-weight:600; margin-bottom:.5rem;">Navigation</div>
-            <ul class="mb-0" style="padding-left:1.1rem;">
+            <div style="color:#B0151A; font-weight:600; margin-bottom:.5rem;">Run Payroll</div>
+            <ul class="mb-3" style="padding-left:1.1rem;">
               {% if role == 'admin' %}
+                <li><a href="/companies" style="color:#000; text-decoration:none;">Company</a></li>
+                <li><a href="/employees" style="color:#000; text-decoration:none;">Employee</a></li>
+                <li><a href="/data-entry" style="color:#000; text-decoration:none;">Data Entry</a></li>
+                <li><a href="/reports" style="color:#000; text-decoration:none;">Reports</a></li>
                 <li><a href="/manage/companies" style="color:#000; text-decoration:none;">Edit Company</a></li>
                 <li><a href="/manage/employees" style="color:#000; text-decoration:none;">Edit Employee</a></li>
-                <li><a href="/manage/subcontracts" style="color:#000; text-decoration:none;">Edit Sub-contract</a></li>
                 <li><a href="/manage/data" style="color:#000; text-decoration:none;">Edit Data</a></li>
                 <li><a href="/admin/submissions" style="color:#000; text-decoration:none;">Submissions</a></li>
-                <li><a href="/reports" style="color:#000; text-decoration:none;">Reports</a></li>
               {% elif role == 'owner' %}
+                <li><a href="/employees" style="color:#000; text-decoration:none;">Employee</a></li>
                 <li><a href="/manage/employees" style="color:#000; text-decoration:none;">Edit Employee</a></li>
-                <li><a href="/manage/subcontracts" style="color:#000; text-decoration:none;">Edit Sub-contract</a></li>
                 <li><a href="/owner/payroll" style="color:#000; text-decoration:none;">Submit Payroll</a></li>
               {% else %}
+                <li><a href="/employees" style="color:#000; text-decoration:none;">Employee</a></li>
                 <li><a href="/manage/employees" style="color:#000; text-decoration:none;">Edit Employee</a></li>
               {% endif %}
+            </ul>
+
+            <div style="color:#B0151A; font-weight:600; margin-bottom:.5rem;">Sub-Contractor</div>
+            <ul class="mb-0" style="padding-left:1.1rem;">
+              <li><a href="/subcontracts/new" style="color:#000; text-decoration:none;">New Supplier</a></li>
+              <li><a href="/subcontracts/bills" style="color:#000; text-decoration:none;">Pay Bills</a></li>
+              <li><a href="/subcontracts/reports" style="color:#000; text-decoration:none;">Reports</a></li>
             </ul>
           </div>
         </div>
