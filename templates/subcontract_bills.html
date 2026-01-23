@@ -1,9 +1,22 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Pay Bills</h2>
-<div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">Record subcontractor bills separately from payroll.</div>
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h2 class="mb-1">Expenses</h2>
+    <div class="text-muted" style="font-size:0.95rem;">Subcontract bills and payments.</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary btn-sm" href="/subcontracts/new">New Supplier</a>
+    <a class="btn btn-primary btn-sm" href="#record-bill">Add Bill</a>
+  </div>
+</div>
 
-<form method="get" action="/subcontracts/bills" class="mb-4">
+<div class="d-flex gap-2 flex-wrap mt-3">
+  <span class="badge text-bg-light" style="border:1px solid #d0d5dd;">All transactions</span>
+  <span class="badge text-bg-light" style="border:1px solid #d0d5dd;">Bills</span>
+</div>
+
+<form method="get" action="/subcontracts/bills" class="mt-3 mb-4">
   <input type="hidden" name="run" value="1">
   <div class="row g-2">
     {% if session.get('role') == 'admin' %}
@@ -35,12 +48,12 @@
       <input name="date_to" type="date" class="form-control form-control-sm" value="{{ selected_date_to }}">
     </div>
     <div class="col-12 col-md-3">
-      <button class="btn btn-outline-primary btn-sm w-100" type="submit">Load Bills</button>
+      <button class="btn btn-outline-primary btn-sm w-100" type="submit">Filter</button>
     </div>
   </div>
 </form>
 
-<div class="card mb-4">
+<div id="record-bill" class="card mb-4">
   <div class="card-body">
     <div class="fw-semibold mb-2">Record Bill</div>
     <form method="post" action="/subcontracts/bills">
@@ -98,6 +111,7 @@
   <table class="table table-sm align-middle">
     <thead>
       <tr>
+        <th style="width:36px;"><input type="checkbox" disabled></th>
         <th>Date</th>
         <th>Supplier</th>
         <th>Description</th>
@@ -109,6 +123,7 @@
     <tbody>
       {% for b in bills %}
         <tr>
+          <td><input type="checkbox" disabled></td>
           <td>{{ b.bill_date }}</td>
           <td>{{ b.subcontractor.contractor_company_name if b.subcontractor else '' }}</td>
           <td>{{ b.description or '' }}</td>

@@ -1,18 +1,50 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Expenses &amp; Bills</h2>
-<div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">Sub-contract expenses are tracked here, separate from payroll.</div>
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h2 class="mb-1">Expenses &amp; Bills</h2>
+    <div class="text-muted" style="font-size:0.95rem;">Track subcontract expenses separately from payroll.</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary btn-sm" href="/subcontracts/new">New Supplier</a>
+    <a class="btn btn-primary btn-sm" href="/subcontracts/bills">Add Bill</a>
+  </div>
+</div>
 
-<div class="row g-3">
+<div class="row g-3 mt-2">
   <div class="col-12 col-lg-6">
     <div class="card card-accent">
       <div class="card-body">
-        <div class="fw-semibold mb-2">Sub-Contractor</div>
-        <ul class="mb-0" style="padding-left:1.1rem;">
-          <li><a class="accent-link" href="/subcontracts/new">New Supplier</a></li>
-          <li><a class="accent-link" href="/subcontracts/bills">Pay Bills</a></li>
-          <li><a class="accent-link" href="/subcontracts/reports">Reports</a></li>
-        </ul>
+        <div class="fw-semibold mb-2">Expense Transactions</div>
+        <div class="text-muted" style="font-size:0.9rem; margin-bottom:.5rem;">All subcontract bills and payments.</div>
+        <a class="accent-link" href="/subcontracts/bills">Open transactions</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <div class="card card-accent">
+      <div class="card-body">
+        <div class="fw-semibold mb-2">Suppliers</div>
+        <div class="text-muted" style="font-size:0.9rem; margin-bottom:.5rem;">Manage subcontract suppliers.</div>
+        <a class="accent-link" href="/subcontracts/new">Manage suppliers</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <div class="card card-accent">
+      <div class="card-body">
+        <div class="fw-semibold mb-2">Bills</div>
+        <div class="text-muted" style="font-size:0.9rem; margin-bottom:.5rem;">Record new bills and payments.</div>
+        <a class="accent-link" href="/subcontracts/bills">View bills</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <div class="card card-accent">
+      <div class="card-body">
+        <div class="fw-semibold mb-2">Reports</div>
+        <div class="text-muted" style="font-size:0.9rem; margin-bottom:.5rem;">Subcontract expense reports.</div>
+        <a class="accent-link" href="/subcontracts/reports">Open reports</a>
       </div>
     </div>
   </div>
