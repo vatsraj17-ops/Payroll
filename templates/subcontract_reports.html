@@ -1,7 +1,15 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Subcontract Reports</h2>
-<div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">View subcontract bills in a statement-style report.</div>
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h2 class="mb-1">Subcontract Reports</h2>
+    <div class="text-muted" style="font-size:0.95rem;">View subcontract bills in a statement-style report.</div>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-secondary btn-sm" type="button" onclick="window.print()">Print</button>
+    <a class="btn btn-outline-primary btn-sm" href="/subcontracts/reports/pdf?company_id={{ selected_company_id }}&subcontractor_id={{ selected_subcontractor_id }}&date_from={{ selected_date_from }}&date_to={{ selected_date_to }}">Download PDF</a>
+  </div>
+</div>
 
 <form method="get" action="/subcontracts/reports" class="mb-4">
   <input type="hidden" name="run" value="1">

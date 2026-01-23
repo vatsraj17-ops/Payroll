@@ -1175,6 +1175,150 @@ def subcontract_reports():
     )
 
 
+@app.route('/subcontracts/reports/pdf', methods=['GET'])
+@require_login
+def subcontract_reports_pdf():
+    import io
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet
+
+    company_id = (request.args.get('company_id') or '').strip()
+    subcontractor_id = (request.args.get('subcontractor_id') or '').strip()
+    date_from = (request.args.get('date_from') or '').strip()
+    date_to = (request.args.get('date_to') or '').strip()
+
+    if _is_owner_session():
+        company_id = str(session.get('company_id') or '').strip()
+
+    allowed_company_ids = _allowed_company_ids_for_session()
+    company_id_int = None
+    if company_id:
+        try:
+            company_id_int = int(company_id)
+        except Exception:
+            company_id_int = None
+        if company_id_int is not None and company_id_int not in allowed_company_ids:
+            abort(403)
+
+    q = SubcontractBill.query
+    if company_id_int is not None:
+        q = q.filter(SubcontractBill.company_id == company_id_int)
+    if subcontractor_id:
+        try:
+            q = q.filter(SubcontractBill.subcontractor_id == int(subcontractor_id))
+        except Exception:
+            q = q
+    if date_from:
+        q = q.filter(SubcontractBill.bill_date >= date_from)
+    if date_to:
+        q = q.filter(SubcontractBill.bill_date <= date_to)
+
+    bills = q.order_by(SubcontractBill.bill_date.desc(), SubcontractBill.id.desc()).all()
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
+    styles = getSampleStyleSheet()
+    story = []
+
+    def _money(value: float) -> str:
+        try:
+            return f"${float(value):,.2f}"
+        except Exception:
+            return "$0.00"
+
+    for idx, bill in enumerate(bills):
+        supplier = bill.subcontractor.contractor_company_name if bill.subcontractor else ''
+        company_name = bill.company.name if bill.company else ''
+        bill_date = bill.bill_date.strftime('%Y-%m-%d') if bill.bill_date else ''
+        amount = float(bill.amount or 0.0)
+        gst_amount = float(bill.gst_amount or 0.0)
+        total = float(bill.total or 0.0)
+
+        story.append(Paragraph('Bill', styles['Heading2']))
+        story.append(Spacer(1, 6))
+
+        header_tbl = Table(
+            [
+                [
+                    Paragraph(f"<b>Supplier</b><br/>{supplier}<br/><font size=9>{company_name}</font>", styles['BodyText']),
+                    Paragraph(f"<b>Bill Date</b><br/>{bill_date}", styles['BodyText']),
+                ]
+            ],
+            colWidths=[doc.width * 0.65, doc.width * 0.35],
+        )
+        header_tbl.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        story.append(header_tbl)
+        story.append(Spacer(1, 10))
+
+        line_rows = [
+            ['SERVICE', 'DESCRIPTION', 'TAX', 'QTY', 'RATE', 'AMOUNT'],
+            [
+                'Subcontract',
+                bill.description or '',
+                'GST/HST',
+                '1',
+                _money(amount),
+                _money(amount),
+            ],
+        ]
+        line_tbl = Table(
+            line_rows,
+            colWidths=[1.4 * inch, 2.6 * inch, 0.8 * inch, 0.6 * inch, 1.0 * inch, 1.0 * inch],
+        )
+        line_tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e9eff6')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#2b5a85')),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('LINEBELOW', (0, 0), (-1, 0), 0.5, colors.HexColor('#cbd5e1')),
+            ('LINEBELOW', (0, 1), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
+            ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),
+            ('ALIGN', (2, 0), (-1, 0), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        story.append(line_tbl)
+        story.append(Spacer(1, 8))
+
+        totals_tbl = Table(
+            [
+                ['Subtotal', _money(amount)],
+                ['Sales Tax Total', _money(gst_amount)],
+                ['Total', _money(total)],
+                ['Balance Due', _money(total)],
+            ],
+            colWidths=[doc.width * 0.75, doc.width * 0.25],
+        )
+        totals_tbl.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('LINEABOVE', (0, 3), (-1, 3), 0.5, colors.HexColor('#cbd5e1')),
+        ]))
+        story.append(totals_tbl)
+
+        if idx < len(bills) - 1:
+            story.append(PageBreak())
+
+    if not bills:
+        story.append(Paragraph('No subcontract bills match the selected filters.', styles['BodyText']))
+
+    doc.build(story)
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name='subcontract_reports.pdf',
+    )
+
+
 @app.route('/subcontracts/<int:sub_id>/edit', methods=['GET', 'POST'])
 @require_login
 def edit_subcontractor(sub_id: int):
