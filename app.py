@@ -632,6 +632,18 @@ def _parse_date(value: str | None) -> datetime.date | None:
         return None
 
 
+@app.route('/payroll', methods=['GET'])
+@require_login
+def payroll_home():
+    return render_template('payroll_home.html')
+
+
+@app.route('/expenses', methods=['GET'])
+@require_login
+def expenses_home():
+    return render_template('expenses_home.html')
+
+
 @app.route('/employees', methods=['GET', 'POST'])
 @require_login
 def employees():

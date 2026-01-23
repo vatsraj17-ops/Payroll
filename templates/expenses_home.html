@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Expenses &amp; Bills</h2>
+<div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">Sub-contract expenses are tracked here, separate from payroll.</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-6">
+    <div class="card card-accent">
+      <div class="card-body">
+        <div class="fw-semibold mb-2">Sub-Contractor</div>
+        <ul class="mb-0" style="padding-left:1.1rem;">
+          <li><a class="accent-link" href="/subcontracts/new">New Supplier</a></li>
+          <li><a class="accent-link" href="/subcontracts/bills">Pay Bills</a></li>
+          <li><a class="accent-link" href="/subcontracts/reports">Reports</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
