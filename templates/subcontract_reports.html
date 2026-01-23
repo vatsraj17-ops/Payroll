@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
 <h2>Subcontract Reports</h2>
-<div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">View subcontract expenses separately from payroll.</div>
+<div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">View subcontract bills in a statement-style report.</div>
 
 <form method="get" action="/subcontracts/reports" class="mb-4">
   <input type="hidden" name="run" value="1">
@@ -43,35 +43,73 @@
 {% if run != '1' %}
   <p class="text-muted">Select filters to load subcontract reports.</p>
 {% elif bills and bills|length > 0 %}
-  <div class="d-flex gap-3 flex-wrap mb-2">
-    <div><span class="text-muted">Subtotal:</span> <strong>{{ totals.amount | money }}</strong></div>
-    <div><span class="text-muted">GST/HST:</span> <strong>{{ totals.gst | money }}</strong></div>
-    <div><span class="text-muted">Total:</span> <strong>{{ totals.total | money }}</strong></div>
-  </div>
-  <table class="table table-sm align-middle">
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>Supplier</th>
-        <th>Description</th>
-        <th class="text-end">Amount</th>
-        <th class="text-end">GST/HST</th>
-        <th class="text-end">Total</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for b in bills %}
-        <tr>
-          <td>{{ b.bill_date }}</td>
-          <td>{{ b.subcontractor.contractor_company_name if b.subcontractor else '' }}</td>
-          <td>{{ b.description or '' }}</td>
-          <td class="text-end">{{ (b.amount or 0) | money }}</td>
-          <td class="text-end">{{ (b.gst_amount or 0) | money }}</td>
-          <td class="text-end">{{ (b.total or 0) | money }}</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  {% for b in bills %}
+    <div class="card mb-4" style="border:1px solid #e5e7eb;">
+      <div class="card-body">
+        <div class="d-flex justify-content-between flex-wrap gap-3">
+          <div>
+            <div style="font-weight:700; font-size:1.05rem;">Bill</div>
+            <div class="text-muted" style="font-size:0.9rem;">Supplier</div>
+            <div class="fw-semibold">{{ b.subcontractor.contractor_company_name if b.subcontractor else '' }}</div>
+            {% if b.company %}
+              <div class="text-muted" style="font-size:0.85rem;">{{ b.company.name }}</div>
+            {% endif %}
+          </div>
+          <div>
+            <div class="text-muted" style="font-size:0.9rem;">Bill Date</div>
+            <div class="fw-semibold">{{ b.bill_date }}</div>
+          </div>
+        </div>
+
+        <hr>
+
+        <table class="table table-sm align-middle">
+          <thead style="background:#eef2f7;">
+            <tr>
+              <th>Service</th>
+              <th>Description</th>
+              <th class="text-center">Tax</th>
+              <th class="text-center">Qty</th>
+              <th class="text-end">Rate</th>
+              <th class="text-end">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Subcontract</td>
+              <td>{{ b.description or '' }}</td>
+              <td class="text-center">GST/HST</td>
+              <td class="text-center">1</td>
+              <td class="text-end">{{ (b.amount or 0) | money }}</td>
+              <td class="text-end">{{ (b.amount or 0) | money }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="row">
+          <div class="col-12 col-md-6"></div>
+          <div class="col-12 col-md-6">
+            <div class="d-flex justify-content-between">
+              <div class="text-muted">Subtotal</div>
+              <div class="fw-semibold">{{ (b.amount or 0) | money }}</div>
+            </div>
+            <div class="d-flex justify-content-between">
+              <div class="text-muted">Sales Tax Total</div>
+              <div class="fw-semibold">{{ (b.gst_amount or 0) | money }}</div>
+            </div>
+            <div class="d-flex justify-content-between">
+              <div class="text-muted">Total</div>
+              <div class="fw-semibold">{{ (b.total or 0) | money }}</div>
+            </div>
+            <div class="d-flex justify-content-between border-top pt-2 mt-2">
+              <div class="text-muted">Balance Due</div>
+              <div class="fw-semibold">{{ (b.total or 0) | money }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
 {% else %}
   <p class="text-muted">No subcontract bills match the selected filters.</p>
 {% endif %}
