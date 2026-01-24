@@ -1738,25 +1738,9 @@ def owner_payroll():
     )
 
     if request.method == 'POST':
-        employee_id_raw = (request.form.get('employee_id') or '').strip()
         period_start_raw = (request.form.get('period_start') or '').strip()
         period_end_raw = (request.form.get('period_end') or '').strip()
         pay_date_raw = (request.form.get('pay_date') or '').strip()
-        hours_raw = (request.form.get('hours') or '').strip()
-
-        if not employee_id_raw:
-            flash('Employee is required.', 'danger')
-            return redirect(url_for('owner_payroll'))
-
-        try:
-            employee_id = int(employee_id_raw)
-        except Exception:
-            flash('Employee selection is invalid.', 'danger')
-            return redirect(url_for('owner_payroll'))
-
-        employee = db.session.get(Employee, employee_id)
-        if not employee or employee.company_id != company_id_int:
-            abort(403)
 
         period_start = None
         period_end = None
@@ -1783,28 +1767,45 @@ def owner_payroll():
             flash('Period start cannot be after period end.', 'danger')
             return redirect(url_for('owner_payroll'))
 
-        try:
-            hours = float(hours_raw)
-        except Exception:
-            flash('Hours must be a number.', 'danger')
+        submitted = 0
+        for e in employees:
+            include_raw = (request.form.get(f'include_{e.id}') or '').strip().lower()
+            if include_raw != 'on':
+                continue
+
+            hours_raw = (request.form.get(f'hours_{e.id}') or '').strip()
+            if not hours_raw:
+                flash(f'Hours are required for {e.first_name} {e.last_name}.', 'danger')
+                return redirect(url_for('owner_payroll'))
+
+            try:
+                hours = float(hours_raw)
+            except Exception:
+                flash(f'Hours must be a number for {e.first_name} {e.last_name}.', 'danger')
+                return redirect(url_for('owner_payroll'))
+
+            if hours < 0:
+                flash(f'Hours cannot be negative for {e.first_name} {e.last_name}.', 'danger')
+                return redirect(url_for('owner_payroll'))
+
+            sub = PayrollSubmission(
+                company_id=company_id_int,
+                employee_id=e.id,
+                period_start=period_start,
+                period_end=period_end,
+                pay_date=pay_date,
+                hours=hours,
+                status='submitted',
+            )
+            db.session.add(sub)
+            submitted += 1
+
+        if submitted == 0:
+            flash('Select at least one employee to submit.', 'danger')
             return redirect(url_for('owner_payroll'))
 
-        if hours < 0:
-            flash('Hours cannot be negative.', 'danger')
-            return redirect(url_for('owner_payroll'))
-
-        sub = PayrollSubmission(
-            company_id=company_id_int,
-            employee_id=employee.id,
-            period_start=period_start,
-            period_end=period_end,
-            pay_date=pay_date,
-            hours=hours,
-            status='submitted',
-        )
-        db.session.add(sub)
         db.session.commit()
-        flash('Payroll submission sent.', 'success')
+        flash(f'Payroll submissions sent: {submitted}.', 'success')
         return redirect(url_for('owner_payroll'))
 
     submissions = (
