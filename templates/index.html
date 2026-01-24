@@ -2,15 +2,17 @@
 {% set hide_sidebar = true %}
 {% block content %}
 
-<div class="card" style="border:1px solid #e5e7eb;">
-  <div class="card-body">
-    {% if company_name %}
-      <div style="margin-top:.35rem; font-weight:600; font-size:1.05rem; color:#111827;">{{ company_name }}</div>
-    {% endif %}
-    {% if company_number %}
-      <div class="text-muted" style="font-size:0.95rem;">{{ company_number }}</div>
-    {% endif %}
+{% if company_name or company_number %}
+  <div class="card" style="border:1px solid #e5e7eb;">
+    <div class="card-body">
+      {% if company_name %}
+        <div style="margin-top:.35rem; font-weight:600; font-size:1.05rem; color:#111827;">{{ company_name }}</div>
+      {% endif %}
+      {% if company_number %}
+        <div class="text-muted" style="font-size:0.95rem;">{{ company_number }}</div>
+      {% endif %}
+    </div>
   </div>
-</div>
+{% endif %}
 
 {% endblock %}
