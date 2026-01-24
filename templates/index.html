@@ -1,56 +1,17 @@
 {% extends 'base.html' %}
+{% set hide_sidebar = true %}
 {% block content %}
 
-{% set role = session.get('role') %}
-
-<div class="py-3">
-	<div style="color:#000; font-weight:600; font-size:1.25rem;">Welcome to a smarter payroll experience.</div>
-	{% if company_name %}
-		<div style="margin-top:.25rem; font-weight:700; font-size:18px; color:#000;">{{ company_name }}</div>
-	{% endif %}
-	<div style="color:#000; font-style:italic; margin-top:.35rem;">Manage payroll with confidence through precision, security, and automation</div>
-</div>
-
-<div class="row g-3">
-	<div class="col-12 col-lg-6">
-		<div class="card card-accent">
-			<div class="card-body">
-				<div style="font-weight:700; font-size:1.1rem; margin-bottom:.5rem;">Run Payroll</div>
-				<div class="row">
-					<div class="col-12">
-						<ul class="mb-0" style="padding-left:1.1rem;">
-							<li><a class="accent-link" href="/payroll">Open Payroll</a></li>
-							{% if role == 'admin' %}
-								<li><a class="accent-link" href="/companies">Company</a></li>
-								<li><a class="accent-link" href="/employees">Employee</a></li>
-								<li><a class="accent-link" href="/data-entry">Data Entry</a></li>
-								<li><a class="accent-link" href="/reports">Reports</a></li>
-							{% elif role == 'owner' %}
-								<li><a class="accent-link" href="/employees">Employee</a></li>
-								<li><a class="accent-link" href="/owner/payroll">Submit Payroll</a></li>
-							{% else %}
-								<li><a class="accent-link" href="/employees">Employee</a></li>
-							{% endif %}
-						</ul>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-
-	<div class="col-12 col-lg-6">
-		<div class="card card-accent">
-			<div class="card-body">
-				<div style="font-weight:700; font-size:1.1rem; margin-bottom:.5rem;">Expenses &amp; Bills</div>
-				<ul class="mb-0" style="padding-left:1.1rem;">
-					<li><a class="accent-link" href="/expenses">Open Expenses</a></li>
-					<li><a class="accent-link" href="/subcontracts/new">New Supplier</a></li>
-					<li><a class="accent-link" href="/subcontracts/bills">Pay Bills</a></li>
-					<li><a class="accent-link" href="/subcontracts/reports">Reports</a></li>
-				</ul>
-			</div>
-		</div>
-	</div>
+<div class="card" style="border:1px solid #e5e7eb;">
+  <div class="card-body">
+    <div style="font-weight:700; font-size:1.1rem;">{{ role_label }}</div>
+    {% if company_name %}
+      <div style="margin-top:.35rem; font-weight:600; font-size:1.05rem; color:#111827;">{{ company_name }}</div>
+    {% endif %}
+    {% if company_number %}
+      <div class="text-muted" style="font-size:0.95rem;">{{ company_number }}</div>
+    {% endif %}
+  </div>
 </div>
 
 {% endblock %}

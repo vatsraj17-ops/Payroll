@@ -502,16 +502,24 @@ with app.app_context():
 def index():
     # No dashboard metrics or payroll activity on homepage
     company_name = ''
+    company_number = ''
+    role_label = 'User'
     if _is_owner_session() and session.get('company_id'):
         try:
             c = db.session.get(Company, int(session.get('company_id')))
             if c and c.name:
                 company_name = c.name
+                company_number = c.business_number or ''
         except Exception:
             company_name = ''
     elif _is_admin_session():
-        company_name = 'Admin'
-    return render_template('index.html', company_name=company_name)
+        role_label = 'Admin'
+    return render_template(
+        'index.html',
+        company_name=company_name,
+        company_number=company_number,
+        role_label=role_label,
+    )
 
 
 @app.route('/companies', methods=['GET', 'POST'])
