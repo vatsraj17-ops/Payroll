@@ -48,6 +48,16 @@
         </div>
 
         <div class="ms-auto d-flex align-items-center gap-2">
+          {% if header_company_name or header_company_number %}
+            <div class="text-end me-2" style="line-height:1.1;">
+              {% if header_company_name %}
+                <div style="font-weight:600; color:#B0151A;">{{ header_company_name }}</div>
+              {% endif %}
+              {% if header_company_number %}
+                <div style="font-size:0.9rem; color:#B0151A;">{{ header_company_number }}</div>
+              {% endif %}
+            </div>
+          {% endif %}
           {% if session.get('role') == 'admin' %}
             <span class="badge" style="background:#B0151A; color:#fff; font-weight:600;">Admin</span>
           {% endif %}

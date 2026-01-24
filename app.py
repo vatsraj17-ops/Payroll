@@ -640,6 +640,25 @@ def _parse_date(value: str | None) -> datetime.date | None:
         return None
 
 
+@app.context_processor
+def _inject_company_header():
+    header_company_name = ''
+    header_company_number = ''
+    if _is_owner_session() and session.get('company_id'):
+        try:
+            c = db.session.get(Company, int(session.get('company_id')))
+            if c:
+                header_company_name = c.name or ''
+                header_company_number = c.business_number or ''
+        except Exception:
+            header_company_name = ''
+            header_company_number = ''
+    return {
+        'header_company_name': header_company_name,
+        'header_company_number': header_company_number,
+    }
+
+
 @app.route('/payroll', methods=['GET'])
 @require_login
 def payroll_home():
