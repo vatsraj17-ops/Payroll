@@ -47,9 +47,12 @@
           </div>
         </div>
 
-        <div class="ms-auto">
+        <div class="ms-auto d-flex align-items-center gap-2">
+          {% if session.get('role') == 'admin' %}
+            <span class="badge" style="background:#B0151A; color:#fff; font-weight:600;">Admin</span>
+          {% endif %}
           {% if session.get('user_id') %}
-            <a href="/change-password" class="btn btn-sm me-2" style="border:1px solid #B0151A; color:#B0151A; font-weight:600;">Change Password</a>
+            <a href="/change-password" class="btn btn-sm" style="border:1px solid #B0151A; color:#B0151A; font-weight:600;">Change Password</a>
             <a href="/logout" class="btn btn-sm" style="border:1px solid #B0151A; color:#B0151A; font-weight:600;">Logout</a>
           {% endif %}
         </div>
