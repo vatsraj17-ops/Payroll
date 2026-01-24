@@ -662,7 +662,11 @@ def _inject_company_header():
 @app.route('/payroll', methods=['GET'])
 @require_login
 def payroll_home():
-    return render_template('payroll_home.html')
+    if _is_owner_session():
+        return redirect(url_for('owner_payroll'))
+    if _is_admin_session():
+        return redirect(url_for('data_entry'))
+    return redirect(url_for('employees'))
 
 
 @app.route('/expenses', methods=['GET'])
