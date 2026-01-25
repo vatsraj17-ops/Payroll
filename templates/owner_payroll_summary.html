@@ -1,4 +1,7 @@
 {% extends 'base.html' %}
+{% set hide_nav = true %}
+{% set hide_sidebar = true %}
+{% set show_hamburger = true %}
 {% block content %}
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
   <h2 class="mb-0">Payroll tax and wage summary</h2>
@@ -37,15 +40,15 @@
         <td></td>
         <td></td>
         <td></td>
-        <td class="text-end">{{ total_tax_amount | money }}</td>
+        <td class="text-end">{% if show_results %}{{ total_tax_amount | money }}{% else %}-{% endif %}</td>
       </tr>
       {% for row in rows %}
         <tr>
           <td>{{ row.label }}</td>
-          <td class="text-end">{{ row.total_wages | money }}</td>
-          <td class="text-end">{{ row.excess_wages | money }}</td>
-          <td class="text-end">{{ row.taxable_wages | money }}</td>
-          <td class="text-end">{{ row.tax_amount | money }}</td>
+          <td class="text-end">{% if row.total_wages is not none %}{{ row.total_wages | money }}{% else %}-{% endif %}</td>
+          <td class="text-end">{% if row.excess_wages is not none %}{{ row.excess_wages | money }}{% else %}-{% endif %}</td>
+          <td class="text-end">{% if row.taxable_wages is not none %}{{ row.taxable_wages | money }}{% else %}-{% endif %}</td>
+          <td class="text-end">{% if row.tax_amount is not none %}{{ row.tax_amount | money }}{% else %}-{% endif %}</td>
         </tr>
       {% endfor %}
     </tbody>

@@ -2143,97 +2143,110 @@ def owner_payroll_summary():
         flash('From date cannot be after To date.', 'danger')
         return redirect(url_for('owner_payroll_summary'))
 
-    q = (
-        db.session.query(
-            func.coalesce(func.sum(PayrollLine.gross), 0.0),
-            func.coalesce(func.sum(PayrollLine.federal_tax), 0.0),
-            func.coalesce(func.sum(PayrollLine.ontario_tax), 0.0),
-            func.coalesce(func.sum(PayrollLine.ei_employee), 0.0),
-            func.coalesce(func.sum(PayrollLine.ei_employer), 0.0),
-            func.coalesce(func.sum(PayrollLine.cpp_employee), 0.0),
-            func.coalesce(func.sum(PayrollLine.cpp2_employee), 0.0),
-            func.coalesce(func.sum(PayrollLine.cpp2_employer), 0.0),
+    show_results = bool(date_from and date_to)
+    sum_gross = sum_income_tax = sum_ei_emp = sum_ei_employer = 0.0
+    sum_cpp_base = sum_cpp2 = sum_cpp2_employer = 0.0
+    total_tax_amount = 0.0
+
+    if show_results:
+        q = (
+            db.session.query(
+                func.coalesce(func.sum(PayrollLine.gross), 0.0),
+                func.coalesce(func.sum(PayrollLine.federal_tax), 0.0),
+                func.coalesce(func.sum(PayrollLine.ontario_tax), 0.0),
+                func.coalesce(func.sum(PayrollLine.ei_employee), 0.0),
+                func.coalesce(func.sum(PayrollLine.ei_employer), 0.0),
+                func.coalesce(func.sum(PayrollLine.cpp_employee), 0.0),
+                func.coalesce(func.sum(PayrollLine.cpp2_employee), 0.0),
+                func.coalesce(func.sum(PayrollLine.cpp2_employer), 0.0),
+            )
+            .join(Employee)
+            .filter(Employee.company_id == int(company_id))
+            .filter(PayrollLine.pay_date >= date_from)
+            .filter(PayrollLine.pay_date <= date_to)
         )
-        .join(Employee)
-        .filter(Employee.company_id == int(company_id))
-    )
-    if date_from:
-        q = q.filter(PayrollLine.pay_date >= date_from)
-    if date_to:
-        q = q.filter(PayrollLine.pay_date <= date_to)
 
-    (
-        sum_gross,
-        sum_federal,
-        sum_ontario,
-        sum_ei_emp,
-        sum_ei_employer,
-        sum_cpp_total,
-        sum_cpp2,
-        sum_cpp2_employer,
-    ) = q.one()
+        (
+            sum_gross,
+            sum_federal,
+            sum_ontario,
+            sum_ei_emp,
+            sum_ei_employer,
+            sum_cpp_total,
+            sum_cpp2,
+            sum_cpp2_employer,
+        ) = q.one()
 
-    sum_income_tax = float(sum_federal or 0.0) + float(sum_ontario or 0.0)
-    sum_cpp_base = max(0.0, float(sum_cpp_total or 0.0) - float(sum_cpp2 or 0.0))
+        sum_income_tax = float(sum_federal or 0.0) + float(sum_ontario or 0.0)
+        sum_cpp_base = max(0.0, float(sum_cpp_total or 0.0) - float(sum_cpp2 or 0.0))
+
+        total_tax_amount = (
+            sum_income_tax
+            + float(sum_ei_emp or 0.0)
+            + float(sum_ei_employer or 0.0)
+            + float(sum_cpp_base or 0.0)
+            + float(sum_cpp_base or 0.0)
+            + float(sum_cpp2 or 0.0)
+            + float(sum_cpp2_employer or 0.0)
+        )
 
     rows = [
         {
             'label': 'Income Tax',
-            'total_wages': sum_gross,
-            'excess_wages': 0.0,
-            'taxable_wages': sum_gross,
-            'tax_amount': sum_income_tax,
+            'total_wages': sum_gross if show_results else None,
+            'excess_wages': 0.0 if show_results else None,
+            'taxable_wages': sum_gross if show_results else None,
+            'tax_amount': sum_income_tax if show_results else None,
         },
         {
             'label': 'Employment Insurance',
-            'total_wages': sum_gross,
-            'excess_wages': 0.0,
-            'taxable_wages': sum_gross,
-            'tax_amount': sum_ei_emp,
+            'total_wages': sum_gross if show_results else None,
+            'excess_wages': 0.0 if show_results else None,
+            'taxable_wages': sum_gross if show_results else None,
+            'tax_amount': sum_ei_emp if show_results else None,
         },
         {
             'label': 'Employment Insurance Employer',
-            'total_wages': sum_gross,
-            'excess_wages': 0.0,
-            'taxable_wages': sum_gross,
-            'tax_amount': sum_ei_employer,
+            'total_wages': sum_gross if show_results else None,
+            'excess_wages': 0.0 if show_results else None,
+            'taxable_wages': sum_gross if show_results else None,
+            'tax_amount': sum_ei_employer if show_results else None,
         },
         {
             'label': 'Canada Pension Plan',
-            'total_wages': sum_gross,
-            'excess_wages': 0.0,
-            'taxable_wages': sum_gross,
-            'tax_amount': sum_cpp_base,
+            'total_wages': sum_gross if show_results else None,
+            'excess_wages': 0.0 if show_results else None,
+            'taxable_wages': sum_gross if show_results else None,
+            'tax_amount': sum_cpp_base if show_results else None,
         },
         {
             'label': 'Canada Pension Plan Employer',
-            'total_wages': sum_gross,
-            'excess_wages': 0.0,
-            'taxable_wages': sum_gross,
-            'tax_amount': sum_cpp_base,
+            'total_wages': sum_gross if show_results else None,
+            'excess_wages': 0.0 if show_results else None,
+            'taxable_wages': sum_gross if show_results else None,
+            'tax_amount': sum_cpp_base if show_results else None,
         },
         {
             'label': 'Second Canada Pension Plan',
-            'total_wages': sum_gross,
-            'excess_wages': 0.0,
-            'taxable_wages': sum_gross,
-            'tax_amount': sum_cpp2,
+            'total_wages': sum_gross if show_results else None,
+            'excess_wages': 0.0 if show_results else None,
+            'taxable_wages': sum_gross if show_results else None,
+            'tax_amount': sum_cpp2 if show_results else None,
         },
         {
             'label': 'Second Canada Pension Plan Employer',
-            'total_wages': sum_gross,
-            'excess_wages': 0.0,
-            'taxable_wages': sum_gross,
-            'tax_amount': sum_cpp2_employer,
+            'total_wages': sum_gross if show_results else None,
+            'excess_wages': 0.0 if show_results else None,
+            'taxable_wages': sum_gross if show_results else None,
+            'tax_amount': sum_cpp2_employer if show_results else None,
         },
     ]
-
-    total_tax_amount = sum(r['tax_amount'] or 0.0 for r in rows)
 
     return render_template(
         'owner_payroll_summary.html',
         rows=rows,
         total_tax_amount=total_tax_amount,
+        show_results=show_results,
         selected_date_from=date_from_raw,
         selected_date_to=date_to_raw,
     )
