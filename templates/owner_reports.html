@@ -4,6 +4,7 @@
 <div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">View previously entered payroll and paystubs.</div>
 
 <form method="get" action="/owner/reports" class="mb-3">
+  <input type="hidden" name="run" value="1">
   <div class="row g-2">
     <div class="col-12 col-md-4">
       <label class="form-label" style="font-size:0.9rem;">Employee (optional)</label>
@@ -58,7 +59,7 @@
       </tbody>
     </table>
   </div>
-{% else %}
+{% elif run == '1' %}
   <p class="text-muted">No payroll entries found for the selected filters.</p>
 {% endif %}
 {% endblock %}

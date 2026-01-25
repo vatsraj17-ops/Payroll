@@ -3374,22 +3374,25 @@ def owner_reports():
         .all()
     )
 
+    run = (request.args.get('run') or '').strip()
     employee_id = (request.args.get('employee_id') or '').strip()
     date_from = (request.args.get('date_from') or '').strip()
     date_to = (request.args.get('date_to') or '').strip()
 
-    q = PayrollLine.query.join(Employee).filter(Employee.company_id == company_id_int)
-    if employee_id:
-        try:
-            q = q.filter(PayrollLine.employee_id == int(employee_id))
-        except Exception:
-            q = q
-    if date_from:
-        q = q.filter(PayrollLine.pay_date >= date_from)
-    if date_to:
-        q = q.filter(PayrollLine.pay_date <= date_to)
+    lines = []
+    if run == '1':
+        q = PayrollLine.query.join(Employee).filter(Employee.company_id == company_id_int)
+        if employee_id:
+            try:
+                q = q.filter(PayrollLine.employee_id == int(employee_id))
+            except Exception:
+                q = q
+        if date_from:
+            q = q.filter(PayrollLine.pay_date >= date_from)
+        if date_to:
+            q = q.filter(PayrollLine.pay_date <= date_to)
 
-    lines = q.order_by(PayrollLine.pay_date.desc(), PayrollLine.id.desc()).limit(200).all()
+        lines = q.order_by(PayrollLine.pay_date.desc(), PayrollLine.id.desc()).limit(200).all()
 
     return render_template(
         'owner_reports.html',
@@ -3398,6 +3401,7 @@ def owner_reports():
         selected_employee_id=employee_id,
         selected_date_from=date_from,
         selected_date_to=date_to,
+        run=run,
     )
 
 
