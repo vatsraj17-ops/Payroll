@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Reports</h2>
+<div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">View previously entered payroll and paystubs.</div>
+
+<form method="get" action="/owner/reports" class="mb-3">
+  <div class="row g-2">
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">Employee (optional)</label>
+      <select name="employee_id" class="form-select form-select-sm">
+        <option value="">-- Employee --</option>
+        {% for e in employees %}
+          <option value="{{ e.id }}" {% if selected_employee_id and selected_employee_id|int == e.id %}selected{% endif %}>{{ (e.first_name ~ ' ' ~ e.last_name).strip() }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-3">
+      <label class="form-label" style="font-size:0.9rem;">From</label>
+      <input name="date_from" type="date" class="form-control form-control-sm" value="{{ selected_date_from }}">
+    </div>
+    <div class="col-12 col-md-3">
+      <label class="form-label" style="font-size:0.9rem;">To</label>
+      <input name="date_to" type="date" class="form-control form-control-sm" value="{{ selected_date_to }}">
+    </div>
+    <div class="col-12 col-md-2" style="display:flex; align-items:end;">
+      <button class="btn btn-primary btn-sm w-100">View</button>
+    </div>
+  </div>
+</form>
+
+<div class="d-flex gap-2 flex-wrap mb-3">
+  <a class="btn btn-outline-secondary btn-sm" href="/owner/paystubs_preview?date_from={{ selected_date_from }}&date_to={{ selected_date_to }}" target="_blank" rel="noopener">Print paystubs</a>
+  <a class="btn btn-outline-primary btn-sm" href="/owner/paystubs_pdf?date_from={{ selected_date_from }}&date_to={{ selected_date_to }}" target="_blank" rel="noopener">Download paystubs</a>
+</div>
+
+{% if lines %}
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Pay date</th>
+          <th>Employee</th>
+          <th class="text-end">Hours</th>
+          <th class="text-end">Gross</th>
+          <th class="text-end">Net</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for line in lines %}
+          <tr>
+            <td>{{ line.pay_date.strftime('%Y-%m-%d') if line.pay_date else '' }}</td>
+            <td>{{ (line.employee.first_name ~ ' ' ~ line.employee.last_name).strip() if line.employee else '' }}</td>
+            <td class="text-end">{{ '%.2f'|format(line.hours or 0) }}</td>
+            <td class="text-end">{{ (line.gross or 0) | money }}</td>
+            <td class="text-end">{{ (line.net or 0) | money }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p class="text-muted">No payroll entries found for the selected filters.</p>
+{% endif %}
+{% endblock %}

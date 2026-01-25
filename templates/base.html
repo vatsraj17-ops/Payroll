@@ -81,6 +81,11 @@
           <div class="nav-card"><a href="/">Home</a></div>
           <div class="nav-card"><a href="/payroll">Run Payroll</a></div>
           <div class="nav-card"><a href="/expenses">Expenses &amp; Bills</a></div>
+          {% if role == 'admin' %}
+            <div class="nav-card"><a href="/reports">Reports</a></div>
+          {% elif role == 'owner' %}
+            <div class="nav-card"><a href="/owner/reports">Reports</a></div>
+          {% endif %}
         </div>
       {% endif %}
     </div>
