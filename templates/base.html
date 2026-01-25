@@ -81,11 +81,6 @@
           <div class="nav-card"><a href="/">Home</a></div>
           <div class="nav-card"><a href="/payroll">Run Payroll</a></div>
           <div class="nav-card"><a href="/expenses">Expenses &amp; Bills</a></div>
-          {% if role == 'admin' %}
-            <div class="nav-card"><a href="/reports">Reports</a></div>
-          {% elif role == 'owner' %}
-            <div class="nav-card"><a href="/owner/reports">Reports</a></div>
-          {% endif %}
         </div>
       {% endif %}
     </div>
@@ -94,8 +89,8 @@
       <div class="row">
         {% if not hide_sidebar %}
           <div class="col-12 col-md-3 mb-3">
-            <div style="background:#C3C3C3; border-left:4px solid #B0151A; border-radius:6px; padding:1rem;">
-              <div style="color:#B0151A; font-weight:600; margin-bottom:.5rem;">Navigation</div>
+            <div style="background:#C3C3C3; border-left:4px solid #B0151A; border-radius:6px; padding:.7rem; font-size:0.9rem;">
+              <div style="color:#B0151A; font-weight:600; margin-bottom:.4rem; font-size:0.9rem;">Navigation</div>
               {% if is_expenses and not is_payroll %}
                 <div style="color:#B0151A; font-weight:600; margin-bottom:.5rem;">Sub-Contractor</div>
                 <ul class="mb-0" style="padding-left:1.1rem;">
@@ -115,13 +110,16 @@
                     <li><a href="/manage/employees" style="color:#000; text-decoration:none;">Edit Employee</a></li>
                     <li><a href="/manage/data" style="color:#000; text-decoration:none;">Edit Data</a></li>
                     <li><a href="/admin/submissions" style="color:#000; text-decoration:none;">Submissions</a></li>
+                    <li><a href="/reports" style="color:#000; text-decoration:none;">Reports</a></li>
                   {% elif role == 'owner' %}
                     <li><a href="/employees" style="color:#000; text-decoration:none;">Employee</a></li>
                     <li><a href="/manage/employees" style="color:#000; text-decoration:none;">Edit Employee</a></li>
                     <li><a href="/owner/payroll" style="color:#000; text-decoration:none;">Submit Payroll</a></li>
+                    <li><a href="/owner/reports" style="color:#000; text-decoration:none;">Reports</a></li>
                   {% else %}
                     <li><a href="/employees" style="color:#000; text-decoration:none;">Employee</a></li>
                     <li><a href="/manage/employees" style="color:#000; text-decoration:none;">Edit Employee</a></li>
+                    <li><a href="/owner/reports" style="color:#000; text-decoration:none;">Reports</a></li>
                   {% endif %}
                 </ul>
               {% else %}
@@ -136,13 +134,16 @@
                     <li><a href="/manage/employees" style="color:#000; text-decoration:none;">Edit Employee</a></li>
                     <li><a href="/manage/data" style="color:#000; text-decoration:none;">Edit Data</a></li>
                     <li><a href="/admin/submissions" style="color:#000; text-decoration:none;">Submissions</a></li>
+                    <li><a href="/reports" style="color:#000; text-decoration:none;">Reports</a></li>
                   {% elif role == 'owner' %}
                     <li><a href="/employees" style="color:#000; text-decoration:none;">Employee</a></li>
                     <li><a href="/manage/employees" style="color:#000; text-decoration:none;">Edit Employee</a></li>
                     <li><a href="/owner/payroll" style="color:#000; text-decoration:none;">Submit Payroll</a></li>
+                    <li><a href="/owner/reports" style="color:#000; text-decoration:none;">Reports</a></li>
                   {% else %}
                     <li><a href="/employees" style="color:#000; text-decoration:none;">Employee</a></li>
                     <li><a href="/manage/employees" style="color:#000; text-decoration:none;">Edit Employee</a></li>
+                    <li><a href="/owner/reports" style="color:#000; text-decoration:none;">Reports</a></li>
                   {% endif %}
                 </ul>
 
