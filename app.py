@@ -1792,16 +1792,91 @@ def owner_payroll():
                 flash(f'Hours cannot be negative for {e.first_name} {e.last_name}.', 'danger')
                 return redirect(url_for('owner_payroll'))
 
-            sub = PayrollSubmission(
-                company_id=company_id_int,
-                employee_id=e.id,
-                period_start=period_start,
-                period_end=period_end,
-                pay_date=pay_date,
-                hours=hours,
-                status='submitted',
+            pay_rate_used = float(e.pay_rate or 0.0)
+            regular_gross = hours * pay_rate_used
+            vacation_pay = 0.0
+            if bool(getattr(e, 'vacation_pay_enabled', False)):
+                vacation_pay = 0.04 * float(regular_gross or 0.0)
+            gross = float(regular_gross or 0.0) + float(vacation_pay or 0.0)
+
+            pay_periods = 26
+            if e.payroll_frequency:
+                freq = (e.payroll_frequency or '').strip().lower()
+                if freq == 'weekly':
+                    pay_periods = 52
+                elif freq in {'bi-weekly', 'biweekly'}:
+                    pay_periods = 26
+                elif freq == 'monthly':
+                    pay_periods = 12
+
+            ytd_cpp = 0.0
+            ytd_cpp2 = 0.0
+            ytd_ei_emp = 0.0
+            ytd_ei_employer = 0.0
+            year_start = datetime.date(pay_date.year, 1, 1)
+            year_end = datetime.date(pay_date.year, 12, 31)
+            ytd_filter = [
+                PayrollLine.employee_id == e.id,
+                PayrollLine.pay_date >= year_start,
+                PayrollLine.pay_date <= year_end,
+                PayrollLine.pay_date < pay_date,
+            ]
+            ytd_cpp = float(
+                db.session.query(func.coalesce(func.sum(PayrollLine.cpp_employee), 0.0))
+                .filter(*ytd_filter)
+                .scalar()
+                or 0.0
             )
-            db.session.add(sub)
+            ytd_cpp2 = float(
+                db.session.query(func.coalesce(func.sum(PayrollLine.cpp2_employee), 0.0))
+                .filter(*ytd_filter)
+                .scalar()
+                or 0.0
+            )
+            ytd_ei_emp = float(
+                db.session.query(func.coalesce(func.sum(PayrollLine.ei_employee), 0.0))
+                .filter(*ytd_filter)
+                .scalar()
+                or 0.0
+            )
+            ytd_ei_employer = float(
+                db.session.query(func.coalesce(func.sum(PayrollLine.ei_employer), 0.0))
+                .filter(*ytd_filter)
+                .scalar()
+                or 0.0
+            )
+
+            result = calculate_payroll(
+                gross,
+                pay_periods_per_year=pay_periods,
+                ytd_cpp_employee=ytd_cpp,
+                ytd_cpp2_employee=ytd_cpp2,
+                ytd_ei_employee=ytd_ei_emp,
+                ytd_ei_employer=ytd_ei_employer,
+                ei_exempt=bool(getattr(e, 'ei_exempt', False)),
+            )
+
+            pl = PayrollLine(
+                employee_id=e.id,
+                hours=hours,
+                vacation_pay=float(vacation_pay or 0.0),
+                gross=gross,
+                net=result['net_pay'],
+                cpp_employee=result['cpp_employee'],
+                cpp2_employee=result.get('cpp2_employee', 0.0),
+                ei_employee=result['ei_employee'],
+                ei_employer=result['ei_employer'],
+                cpp2_employer=result.get('cpp2_employer', 0.0),
+                federal_tax=result['federal_tax'],
+                ontario_tax=result['ontario_tax'],
+                total_employee_deductions=result['total_employee_deductions'],
+                employer_total_cost=result['employer_total_cost'],
+                total_remittance=result['total_remittance'],
+                period_start=period_start or None,
+                period_end=period_end or None,
+                pay_date=pay_date or None,
+            )
+            db.session.add(pl)
             submitted += 1
 
         if submitted == 0:
@@ -1809,19 +1884,10 @@ def owner_payroll():
             return redirect(url_for('owner_payroll'))
 
         db.session.commit()
-        flash(f'Payroll submissions sent: {submitted}.', 'success')
+        flash(f'Payroll saved: {submitted}.', 'success')
         return redirect(url_for('owner_payroll'))
 
-    submissions = (
-        PayrollSubmission.query
-        .filter(PayrollSubmission.company_id == company_id_int)
-        .join(Employee)
-        .order_by(PayrollSubmission.created_at.desc(), PayrollSubmission.id.desc())
-        .limit(200)
-        .all()
-    )
-
-    return render_template('owner_payroll.html', employees=employees, submissions=submissions)
+    return render_template('owner_payroll.html', employees=employees)
 
 
 @app.route('/admin/submissions', methods=['GET'])
