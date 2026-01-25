@@ -1917,7 +1917,15 @@ def _build_owner_payroll_preview(employees: list[Employee], company_id_int: int,
         raise ValueError('Period start cannot be after period end.')
 
     rows = []
-    totals = {'regular_hours': 0.0, 'total_hours': 0.0, 'gross': 0.0}
+    totals = {
+        'regular_hours': 0.0,
+        'total_hours': 0.0,
+        'gross': 0.0,
+        'employee_deductions': 0.0,
+        'net_pay': 0.0,
+        'employer_contributions': 0.0,
+        'total_payroll_cost': 0.0,
+    }
     included = 0
 
     for e in employees:
@@ -1944,15 +1952,79 @@ def _build_owner_payroll_preview(employees: list[Employee], company_id_int: int,
             vacation_pay = 0.04 * float(regular_gross or 0.0)
         gross = float(regular_gross or 0.0) + float(vacation_pay or 0.0)
 
+        pay_periods = 26
+        if e.payroll_frequency:
+            freq = (e.payroll_frequency or '').strip().lower()
+            if freq == 'weekly':
+                pay_periods = 52
+            elif freq in {'bi-weekly', 'biweekly'}:
+                pay_periods = 26
+            elif freq == 'monthly':
+                pay_periods = 12
+
+        year_start = datetime.date(pay_date.year, 1, 1)
+        year_end = datetime.date(pay_date.year, 12, 31)
+        ytd_filter = [
+            PayrollLine.employee_id == e.id,
+            PayrollLine.pay_date >= year_start,
+            PayrollLine.pay_date <= year_end,
+            PayrollLine.pay_date < pay_date,
+        ]
+        ytd_cpp = float(
+            db.session.query(func.coalesce(func.sum(PayrollLine.cpp_employee), 0.0))
+            .filter(*ytd_filter)
+            .scalar()
+            or 0.0
+        )
+        ytd_cpp2 = float(
+            db.session.query(func.coalesce(func.sum(PayrollLine.cpp2_employee), 0.0))
+            .filter(*ytd_filter)
+            .scalar()
+            or 0.0
+        )
+        ytd_ei_emp = float(
+            db.session.query(func.coalesce(func.sum(PayrollLine.ei_employee), 0.0))
+            .filter(*ytd_filter)
+            .scalar()
+            or 0.0
+        )
+        ytd_ei_employer = float(
+            db.session.query(func.coalesce(func.sum(PayrollLine.ei_employer), 0.0))
+            .filter(*ytd_filter)
+            .scalar()
+            or 0.0
+        )
+
+        result = calculate_payroll(
+            gross,
+            pay_periods_per_year=pay_periods,
+            ytd_cpp_employee=ytd_cpp,
+            ytd_cpp2_employee=ytd_cpp2,
+            ytd_ei_employee=ytd_ei_emp,
+            ytd_ei_employer=ytd_ei_employer,
+            ei_exempt=bool(getattr(e, 'ei_exempt', False)),
+        )
+
+        employer_contrib = float(result.get('employer_total_cost', 0.0)) - float(result.get('gross', gross))
+        if employer_contrib < 0:
+            employer_contrib = 0.0
+
         rows.append({
             'employee': e,
             'hours': hours,
             'vacation_enabled': bool(getattr(e, 'vacation_pay_enabled', False)),
             'gross': gross,
+            'employee_deductions': float(result.get('total_employee_deductions', 0.0)),
+            'net_pay': float(result.get('net_pay', 0.0)),
+            'employer_contributions': employer_contrib,
         })
         totals['regular_hours'] += hours
         totals['total_hours'] += hours
         totals['gross'] += gross
+        totals['employee_deductions'] += float(result.get('total_employee_deductions', 0.0))
+        totals['net_pay'] += float(result.get('net_pay', 0.0))
+        totals['employer_contributions'] += employer_contrib
+        totals['total_payroll_cost'] += float(result.get('employer_total_cost', 0.0))
         included += 1
 
     if included == 0:

@@ -1,7 +1,40 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Payroll Preview</h2>
-<div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">Review the payroll before submitting.</div>
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+  <h2 class="mb-0">Run payroll</h2>
+  <div class="text-muted">Pay period: {{ preview.period_start }} to {{ preview.period_end }}</div>
+</div>
+
+<div class="card mb-4" style="border:1px solid #e5e7eb;">
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-12 col-lg-6">
+        <div class="text-muted" style="font-size:0.85rem; font-weight:600;">TOTAL PAYROLL COST</div>
+        <div class="p-3 mt-2" style="background:#f3f4f6; border-radius:8px;">
+          <div style="font-size:1.4rem; font-weight:700;">{{ preview.totals.total_payroll_cost | money }}</div>
+          <div class="mt-2 d-flex justify-content-between">
+            <span class="text-muted">Gross pay</span>
+            <span>{{ preview.totals.gross | money }}</span>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">Employer taxes &amp; contributions</span>
+            <span>{{ preview.totals.employer_contributions | money }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-6">
+        <div class="d-flex justify-content-between">
+          <span class="text-muted">Pay period</span>
+          <span>{{ preview.period_start }} to {{ preview.period_end }}</span>
+        </div>
+        <div class="d-flex justify-content-between">
+          <span class="text-muted">Pay date</span>
+          <span>{{ preview.pay_date }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <form method="post" action="/owner/payroll">
   <input type="hidden" name="period_start" value="{{ preview.period_start }}">
@@ -13,10 +46,11 @@
       <thead>
         <tr>
           <th>Employee</th>
-          <th>Regular Pay (hrs)</th>
-          <th>Vacation Pay</th>
-          <th>Total Hrs</th>
-          <th>Gross Pay</th>
+          <th>Total hours</th>
+          <th>Gross pay</th>
+          <th>Employee taxes &amp; deductions</th>
+          <th>Net pay</th>
+          <th>Employer taxes &amp; contributions</th>
         </tr>
       </thead>
       <tbody>
@@ -24,27 +58,32 @@
           <tr>
             <td>{{ (row.employee.first_name ~ ' ' ~ row.employee.last_name).strip() }}</td>
             <td>{{ '%.2f'|format(row.hours or 0) }}</td>
-            <td>{% if row.vacation_enabled %}4%{% else %}-{% endif %}</td>
-            <td>{{ '%.2f'|format(row.hours or 0) }}</td>
             <td>{{ row.gross | money }}</td>
+            <td>{{ row.employee_deductions | money }}</td>
+            <td>{{ row.net_pay | money }}</td>
+            <td>{{ row.employer_contributions | money }}</td>
           </tr>
           <input type="hidden" name="include_{{ row.employee.id }}" value="on">
           <input type="hidden" name="hours_{{ row.employee.id }}" value="{{ row.hours }}">
         {% endfor %}
         <tr class="fw-semibold">
           <td>Total</td>
-          <td>{{ '%.2f'|format(preview.totals.regular_hours or 0) }}</td>
-          <td></td>
           <td>{{ '%.2f'|format(preview.totals.total_hours or 0) }}</td>
           <td>{{ preview.totals.gross | money }}</td>
+          <td>{{ preview.totals.employee_deductions | money }}</td>
+          <td>{{ preview.totals.net_pay | money }}</td>
+          <td>{{ preview.totals.employer_contributions | money }}</td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <div class="mt-3 d-flex gap-2">
-    <button class="btn btn-primary btn-sm">Submit Payroll</button>
-    <a class="btn btn-outline-secondary btn-sm" href="/owner/payroll">Back</a>
+  <div class="mt-4 d-flex justify-content-between align-items-center">
+    <a class="btn btn-link" href="/owner/payroll">Back</a>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-secondary btn-sm" href="/owner/payroll/preview" onclick="return false;">Preview payroll details</a>
+      <button class="btn btn-primary btn-sm">Submit payroll</button>
+    </div>
   </div>
 </form>
 {% endblock %}
