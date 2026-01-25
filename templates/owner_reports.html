@@ -24,14 +24,14 @@
       <input name="date_to" type="date" class="form-control form-control-sm" value="{{ selected_date_to }}">
     </div>
     <div class="col-12 col-md-2" style="display:flex; align-items:end;">
-      <button class="btn btn-primary btn-sm w-100">View</button>
+      <button class="btn btn-success btn-sm w-100">View</button>
     </div>
   </div>
 </form>
 
 <div class="d-flex gap-2 flex-wrap mb-3">
-  <a class="btn btn-outline-secondary btn-sm" href="/owner/paystubs_preview?date_from={{ selected_date_from }}&date_to={{ selected_date_to }}" target="_blank" rel="noopener">Print paystubs</a>
-  <a class="btn btn-outline-primary btn-sm" href="/owner/paystubs_pdf?date_from={{ selected_date_from }}&date_to={{ selected_date_to }}" target="_blank" rel="noopener">Download paystubs</a>
+  <a class="btn btn-outline-success btn-sm" href="/owner/paystubs_preview?date_from={{ selected_date_from }}&date_to={{ selected_date_to }}" target="_blank" rel="noopener">Print paystubs</a>
+  <a class="btn btn-outline-success btn-sm" href="/owner/paystubs_pdf?date_from={{ selected_date_from }}&date_to={{ selected_date_to }}" target="_blank" rel="noopener">Download paystubs</a>
 </div>
 
 {% if lines %}
