@@ -1890,6 +1890,109 @@ def owner_payroll():
     return render_template('owner_payroll.html', employees=employees)
 
 
+def _build_owner_payroll_preview(employees: list[Employee], company_id_int: int, form: dict) -> dict:
+    period_start_raw = (form.get('period_start') or '').strip()
+    period_end_raw = (form.get('period_end') or '').strip()
+    pay_date_raw = (form.get('pay_date') or '').strip()
+
+    period_start = None
+    period_end = None
+    if period_start_raw:
+        try:
+            period_start = datetime.date.fromisoformat(period_start_raw)
+        except Exception:
+            raise ValueError('Period start must be a valid date.')
+    if period_end_raw:
+        try:
+            period_end = datetime.date.fromisoformat(period_end_raw)
+        except Exception:
+            raise ValueError('Period end must be a valid date.')
+
+    try:
+        pay_date = datetime.date.fromisoformat(pay_date_raw)
+    except Exception:
+        raise ValueError('Pay date must be a valid date.')
+
+    if period_start and period_end and period_start > period_end:
+        raise ValueError('Period start cannot be after period end.')
+
+    rows = []
+    totals = {'regular_hours': 0.0, 'total_hours': 0.0, 'gross': 0.0}
+    included = 0
+
+    for e in employees:
+        include_raw = (form.get(f'include_{e.id}') or '').strip().lower()
+        if include_raw != 'on':
+            continue
+
+        hours_raw = (form.get(f'hours_{e.id}') or '').strip()
+        if not hours_raw:
+            raise ValueError(f'Hours are required for {e.first_name} {e.last_name}.')
+
+        try:
+            hours = float(hours_raw)
+        except Exception:
+            raise ValueError(f'Hours must be a number for {e.first_name} {e.last_name}.')
+
+        if hours < 0:
+            raise ValueError(f'Hours cannot be negative for {e.first_name} {e.last_name}.')
+
+        pay_rate_used = float(e.pay_rate or 0.0)
+        regular_gross = hours * pay_rate_used
+        vacation_pay = 0.0
+        if bool(getattr(e, 'vacation_pay_enabled', False)):
+            vacation_pay = 0.04 * float(regular_gross or 0.0)
+        gross = float(regular_gross or 0.0) + float(vacation_pay or 0.0)
+
+        rows.append({
+            'employee': e,
+            'hours': hours,
+            'vacation_enabled': bool(getattr(e, 'vacation_pay_enabled', False)),
+            'gross': gross,
+        })
+        totals['regular_hours'] += hours
+        totals['total_hours'] += hours
+        totals['gross'] += gross
+        included += 1
+
+    if included == 0:
+        raise ValueError('Select at least one employee to preview.')
+
+    return {
+        'rows': rows,
+        'totals': totals,
+        'period_start': period_start,
+        'period_end': period_end,
+        'pay_date': pay_date,
+    }
+
+
+@app.route('/owner/payroll/preview', methods=['POST'])
+@require_login
+def owner_payroll_preview():
+    if not _is_owner_session():
+        abort(403)
+
+    company_id = session.get('company_id')
+    if not company_id:
+        abort(403)
+
+    company_id_int = int(company_id)
+    employees = (
+        Employee.query.filter(Employee.company_id == company_id_int)
+        .order_by(Employee.first_name, Employee.last_name)
+        .all()
+    )
+
+    try:
+        preview = _build_owner_payroll_preview(employees, company_id_int, request.form)
+    except ValueError as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('owner_payroll'))
+
+    return render_template('owner_payroll_preview.html', preview=preview)
+
+
 @app.route('/admin/submissions', methods=['GET'])
 @require_admin
 def admin_submissions():
