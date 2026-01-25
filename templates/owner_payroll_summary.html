@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+  <h2 class="mb-0">Payroll tax and wage summary</h2>
+</div>
+
+<form method="get" action="/owner/payroll-summary" class="mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-12 col-md-3">
+      <label class="form-label" style="font-size:0.9rem;">From</label>
+      <input name="date_from" type="date" class="form-control form-control-sm" value="{{ selected_date_from }}">
+    </div>
+    <div class="col-12 col-md-3">
+      <label class="form-label" style="font-size:0.9rem;">To</label>
+      <input name="date_to" type="date" class="form-control form-control-sm" value="{{ selected_date_to }}">
+    </div>
+    <div class="col-12 col-md-2">
+      <button class="btn btn-outline-secondary btn-sm w-100">View</button>
+    </div>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-sm align-middle">
+    <thead>
+      <tr>
+        <th>Tax types</th>
+        <th class="text-end">Total wages</th>
+        <th class="text-end">Excess wages</th>
+        <th class="text-end">Taxable wages</th>
+        <th class="text-end">Tax amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="fw-semibold">
+        <td>Federal Taxes</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td class="text-end">{{ total_tax_amount | money }}</td>
+      </tr>
+      {% for row in rows %}
+        <tr>
+          <td>{{ row.label }}</td>
+          <td class="text-end">{{ row.total_wages | money }}</td>
+          <td class="text-end">{{ row.excess_wages | money }}</td>
+          <td class="text-end">{{ row.taxable_wages | money }}</td>
+          <td class="text-end">{{ row.tax_amount | money }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

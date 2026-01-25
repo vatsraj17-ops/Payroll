@@ -2110,6 +2110,135 @@ def owner_payroll_complete():
     )
 
 
+@app.route('/owner/payroll-summary', methods=['GET'])
+@require_login
+def owner_payroll_summary():
+    if not _is_owner_session():
+        abort(403)
+
+    company_id = session.get('company_id')
+    if not company_id:
+        abort(403)
+
+    date_from_raw = (request.args.get('date_from') or '').strip()
+    date_to_raw = (request.args.get('date_to') or '').strip()
+
+    date_from = None
+    date_to = None
+    if date_from_raw:
+        try:
+            date_from = datetime.date.fromisoformat(date_from_raw)
+        except Exception:
+            flash('From date must be a valid date.', 'danger')
+            return redirect(url_for('owner_payroll_summary'))
+
+    if date_to_raw:
+        try:
+            date_to = datetime.date.fromisoformat(date_to_raw)
+        except Exception:
+            flash('To date must be a valid date.', 'danger')
+            return redirect(url_for('owner_payroll_summary'))
+
+    if date_from and date_to and date_from > date_to:
+        flash('From date cannot be after To date.', 'danger')
+        return redirect(url_for('owner_payroll_summary'))
+
+    q = (
+        db.session.query(
+            func.coalesce(func.sum(PayrollLine.gross), 0.0),
+            func.coalesce(func.sum(PayrollLine.federal_tax), 0.0),
+            func.coalesce(func.sum(PayrollLine.ontario_tax), 0.0),
+            func.coalesce(func.sum(PayrollLine.ei_employee), 0.0),
+            func.coalesce(func.sum(PayrollLine.ei_employer), 0.0),
+            func.coalesce(func.sum(PayrollLine.cpp_employee), 0.0),
+            func.coalesce(func.sum(PayrollLine.cpp2_employee), 0.0),
+            func.coalesce(func.sum(PayrollLine.cpp2_employer), 0.0),
+        )
+        .join(Employee)
+        .filter(Employee.company_id == int(company_id))
+    )
+    if date_from:
+        q = q.filter(PayrollLine.pay_date >= date_from)
+    if date_to:
+        q = q.filter(PayrollLine.pay_date <= date_to)
+
+    (
+        sum_gross,
+        sum_federal,
+        sum_ontario,
+        sum_ei_emp,
+        sum_ei_employer,
+        sum_cpp_total,
+        sum_cpp2,
+        sum_cpp2_employer,
+    ) = q.one()
+
+    sum_income_tax = float(sum_federal or 0.0) + float(sum_ontario or 0.0)
+    sum_cpp_base = max(0.0, float(sum_cpp_total or 0.0) - float(sum_cpp2 or 0.0))
+
+    rows = [
+        {
+            'label': 'Income Tax',
+            'total_wages': sum_gross,
+            'excess_wages': 0.0,
+            'taxable_wages': sum_gross,
+            'tax_amount': sum_income_tax,
+        },
+        {
+            'label': 'Employment Insurance',
+            'total_wages': sum_gross,
+            'excess_wages': 0.0,
+            'taxable_wages': sum_gross,
+            'tax_amount': sum_ei_emp,
+        },
+        {
+            'label': 'Employment Insurance Employer',
+            'total_wages': sum_gross,
+            'excess_wages': 0.0,
+            'taxable_wages': sum_gross,
+            'tax_amount': sum_ei_employer,
+        },
+        {
+            'label': 'Canada Pension Plan',
+            'total_wages': sum_gross,
+            'excess_wages': 0.0,
+            'taxable_wages': sum_gross,
+            'tax_amount': sum_cpp_base,
+        },
+        {
+            'label': 'Canada Pension Plan Employer',
+            'total_wages': sum_gross,
+            'excess_wages': 0.0,
+            'taxable_wages': sum_gross,
+            'tax_amount': sum_cpp_base,
+        },
+        {
+            'label': 'Second Canada Pension Plan',
+            'total_wages': sum_gross,
+            'excess_wages': 0.0,
+            'taxable_wages': sum_gross,
+            'tax_amount': sum_cpp2,
+        },
+        {
+            'label': 'Second Canada Pension Plan Employer',
+            'total_wages': sum_gross,
+            'excess_wages': 0.0,
+            'taxable_wages': sum_gross,
+            'tax_amount': sum_cpp2_employer,
+        },
+    ]
+
+    total_tax_amount = sum(r['tax_amount'] or 0.0 for r in rows)
+
+    return render_template(
+        'owner_payroll_summary.html',
+        rows=rows,
+        total_tax_amount=total_tax_amount,
+        selected_date_from=date_from_raw,
+        selected_date_to=date_to_raw,
+    )
+
+
 @app.route('/admin/submissions', methods=['GET'])
 @require_admin
 def admin_submissions():
