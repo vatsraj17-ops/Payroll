@@ -1745,6 +1745,7 @@ def owner_payroll():
         period_start_raw = (request.form.get('period_start') or '').strip()
         period_end_raw = (request.form.get('period_end') or '').strip()
         pay_date_raw = (request.form.get('pay_date') or '').strip()
+        after_submit = (request.form.get('after_submit') or '').strip().lower()
 
         period_start = None
         period_end = None
@@ -1884,6 +1885,24 @@ def owner_payroll():
             return redirect(url_for('owner_payroll'))
 
         db.session.commit()
+        if after_submit in {'print_paystubs', 'download_paystubs'}:
+            pay_date_param = pay_date.isoformat() if pay_date else ''
+            period_start_param = period_start.isoformat() if period_start else ''
+            period_end_param = period_end.isoformat() if period_end else ''
+            if after_submit == 'print_paystubs':
+                return redirect(url_for(
+                    'owner_paystubs_preview',
+                    pay_date=pay_date_param,
+                    period_start=period_start_param,
+                    period_end=period_end_param,
+                ))
+            return redirect(url_for(
+                'owner_paystubs_pdf',
+                pay_date=pay_date_param,
+                period_start=period_start_param,
+                period_end=period_end_param,
+            ))
+
         flash(f'Payroll saved: {submitted}.', 'success')
         return redirect(url_for('owner_payroll'))
 
@@ -2912,6 +2931,48 @@ def reports_paystubs_preview_page():
         pdf_url=pdf_preview_url,
         download_url=pdf_download_url,
     )
+
+
+@app.route('/owner/paystubs_pdf', methods=['GET'])
+@require_login
+def owner_paystubs_pdf():
+    if not _is_owner_session():
+        abort(403)
+
+    company_id = session.get('company_id')
+    if not company_id:
+        abort(403)
+
+    pay_date = (request.args.get('pay_date') or '').strip()
+    period_start = (request.args.get('period_start') or '').strip()
+    period_end = (request.args.get('period_end') or '').strip()
+
+    q = PayrollLine.query.join(Employee).filter(Employee.company_id == int(company_id))
+    if pay_date:
+        q = q.filter(PayrollLine.pay_date == pay_date)
+    if period_start:
+        q = q.filter(PayrollLine.period_start >= period_start)
+    if period_end:
+        q = q.filter(PayrollLine.period_end <= period_end)
+
+    lines = q.order_by(PayrollLine.pay_date.asc(), PayrollLine.id.asc()).all()
+    data = _generate_paystubs_pdf(lines)
+    return (data, 200, {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename="paystubs.pdf"'
+    })
+
+
+@app.route('/owner/paystubs_preview', methods=['GET'])
+@require_login
+def owner_paystubs_preview():
+    if not _is_owner_session():
+        abort(403)
+
+    resp = owner_paystubs_pdf()
+    data, status, headers = resp
+    headers['Content-Disposition'] = 'inline; filename="paystubs_preview.pdf"'
+    return (data, status, headers)
 
 
 @app.route('/reports/roe_pdf', methods=['GET', 'POST'])
