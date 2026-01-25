@@ -1444,6 +1444,8 @@ def delete_employee(employee_id):
     if not e:
         abort(404)
     _require_employee_access(e)
+    PayrollSubmission.query.filter(PayrollSubmission.employee_id == e.id).delete(synchronize_session=False)
+    PayrollLine.query.filter(PayrollLine.employee_id == e.id).delete(synchronize_session=False)
     db.session.delete(e)
     db.session.commit()
     flash('Employee deleted.', 'success')
@@ -1773,6 +1775,7 @@ def owner_payroll():
 
         submitted = 0
         created_lines: list[PayrollLine] = []
+        touched_employee_ids: set[int] = set()
         for e in employees:
             include_raw = (request.form.get(f'include_{e.id}') or '').strip().lower()
             if include_raw != 'on':
@@ -1879,12 +1882,16 @@ def owner_payroll():
             )
             db.session.add(pl)
             created_lines.append(pl)
+            touched_employee_ids.add(e.id)
             submitted += 1
 
         if submitted == 0:
             flash('Select at least one employee to submit.', 'danger')
             return redirect(url_for('owner_payroll'))
 
+        db.session.flush()
+        for employee_id in touched_employee_ids:
+            _recalculate_employee_payroll_lines(employee_id)
         db.session.commit()
         session['last_payroll_line_ids'] = [pl.id for pl in created_lines if pl.id]
         session['last_payroll_context'] = {
@@ -2299,6 +2306,7 @@ def owner_delete_payroll_line(payroll_line_id: int):
         abort(403)
 
     employee_id = pl.employee_id
+    PayrollSubmission.query.filter(PayrollSubmission.payroll_line_id == pl.id).delete(synchronize_session=False)
     db.session.delete(pl)
     db.session.flush()
     _recalculate_employee_payroll_lines(employee_id)
@@ -2751,6 +2759,7 @@ def delete_payroll_line(payroll_line_id):
     pl = db.session.get(PayrollLine, payroll_line_id)
     if not pl:
         abort(404)
+    PayrollSubmission.query.filter(PayrollSubmission.payroll_line_id == pl.id).delete(synchronize_session=False)
     db.session.delete(pl)
     db.session.commit()
     flash('Payroll line deleted.', 'success')
@@ -3313,14 +3322,20 @@ def owner_paystubs_pdf():
     pay_date = (request.args.get('pay_date') or '').strip()
     period_start = (request.args.get('period_start') or '').strip()
     period_end = (request.args.get('period_end') or '').strip()
+    date_from = (request.args.get('date_from') or '').strip()
+    date_to = (request.args.get('date_to') or '').strip()
 
     q = PayrollLine.query.join(Employee).filter(Employee.company_id == int(company_id))
     if pay_date:
         q = q.filter(PayrollLine.pay_date == pay_date)
     if period_start:
-        q = q.filter(PayrollLine.period_start >= period_start)
+        q = q.filter(PayrollLine.period_start == period_start)
     if period_end:
-        q = q.filter(PayrollLine.period_end <= period_end)
+        q = q.filter(PayrollLine.period_end == period_end)
+    if date_from:
+        q = q.filter(PayrollLine.pay_date >= date_from)
+    if date_to:
+        q = q.filter(PayrollLine.pay_date <= date_to)
 
     lines = q.order_by(PayrollLine.pay_date.asc(), PayrollLine.id.asc()).all()
     data = _generate_paystubs_pdf(lines)
