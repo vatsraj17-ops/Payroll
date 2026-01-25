@@ -30,8 +30,8 @@
 </form>
 
 <div class="d-flex gap-2 flex-wrap mb-3">
-  <a class="btn btn-outline-success btn-sm" href="/owner/paystubs_preview?date_from={{ selected_date_from }}&date_to={{ selected_date_to }}" target="_blank" rel="noopener">Print paystubs</a>
-  <a class="btn btn-outline-success btn-sm" href="/owner/paystubs_pdf?date_from={{ selected_date_from }}&date_to={{ selected_date_to }}" target="_blank" rel="noopener">Download paystubs</a>
+  <a class="btn btn-outline-success btn-sm" href="/owner/paystubs_preview?employee_id={{ selected_employee_id }}&date_from={{ selected_date_from }}&date_to={{ selected_date_to }}" target="_blank" rel="noopener">Print paystubs</a>
+  <a class="btn btn-outline-success btn-sm" href="/owner/paystubs_pdf?employee_id={{ selected_employee_id }}&date_from={{ selected_date_from }}&date_to={{ selected_date_to }}" target="_blank" rel="noopener">Download paystubs</a>
 </div>
 
 {% if lines %}

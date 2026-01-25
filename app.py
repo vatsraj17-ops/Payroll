@@ -3324,8 +3324,14 @@ def owner_paystubs_pdf():
     period_end = (request.args.get('period_end') or '').strip()
     date_from = (request.args.get('date_from') or '').strip()
     date_to = (request.args.get('date_to') or '').strip()
+    employee_id = (request.args.get('employee_id') or '').strip()
 
     q = PayrollLine.query.join(Employee).filter(Employee.company_id == int(company_id))
+    if employee_id:
+        try:
+            q = q.filter(PayrollLine.employee_id == int(employee_id))
+        except Exception:
+            q = q
     if pay_date:
         q = q.filter(PayrollLine.pay_date == pay_date)
     if period_start:
