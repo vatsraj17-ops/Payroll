@@ -1745,7 +1745,6 @@ def owner_payroll():
         period_start_raw = (request.form.get('period_start') or '').strip()
         period_end_raw = (request.form.get('period_end') or '').strip()
         pay_date_raw = (request.form.get('pay_date') or '').strip()
-        after_submit = (request.form.get('after_submit') or '').strip().lower()
 
         period_start = None
         period_end = None
@@ -1773,6 +1772,7 @@ def owner_payroll():
             return redirect(url_for('owner_payroll'))
 
         submitted = 0
+        created_lines: list[PayrollLine] = []
         for e in employees:
             include_raw = (request.form.get(f'include_{e.id}') or '').strip().lower()
             if include_raw != 'on':
@@ -1878,6 +1878,7 @@ def owner_payroll():
                 pay_date=pay_date or None,
             )
             db.session.add(pl)
+            created_lines.append(pl)
             submitted += 1
 
         if submitted == 0:
@@ -1885,26 +1886,14 @@ def owner_payroll():
             return redirect(url_for('owner_payroll'))
 
         db.session.commit()
-        if after_submit in {'print_paystubs', 'download_paystubs'}:
-            pay_date_param = pay_date.isoformat() if pay_date else ''
-            period_start_param = period_start.isoformat() if period_start else ''
-            period_end_param = period_end.isoformat() if period_end else ''
-            if after_submit == 'print_paystubs':
-                return redirect(url_for(
-                    'owner_paystubs_preview',
-                    pay_date=pay_date_param,
-                    period_start=period_start_param,
-                    period_end=period_end_param,
-                ))
-            return redirect(url_for(
-                'owner_paystubs_pdf',
-                pay_date=pay_date_param,
-                period_start=period_start_param,
-                period_end=period_end_param,
-            ))
+        session['last_payroll_line_ids'] = [pl.id for pl in created_lines if pl.id]
+        session['last_payroll_context'] = {
+            'pay_date': pay_date.isoformat() if pay_date else '',
+            'period_start': period_start.isoformat() if period_start else '',
+            'period_end': period_end.isoformat() if period_end else '',
+        }
 
-        flash(f'Payroll saved: {submitted}.', 'success')
-        return redirect(url_for('owner_payroll'))
+        return redirect(url_for('owner_payroll_complete'))
 
     return render_template('owner_payroll.html', employees=employees)
 
@@ -2082,6 +2071,43 @@ def owner_payroll_preview():
         return redirect(url_for('owner_payroll'))
 
     return render_template('owner_payroll_preview.html', preview=preview)
+
+
+@app.route('/owner/payroll/complete', methods=['GET'])
+@require_login
+def owner_payroll_complete():
+    if not _is_owner_session():
+        abort(403)
+
+    company_id = session.get('company_id')
+    if not company_id:
+        abort(403)
+
+    line_ids = session.pop('last_payroll_line_ids', None) or []
+    context = session.pop('last_payroll_context', None) or {}
+    if not line_ids:
+        flash('No recent payroll submission found.', 'info')
+        return redirect(url_for('owner_payroll'))
+
+    lines = (
+        PayrollLine.query
+        .join(Employee)
+        .filter(PayrollLine.id.in_(line_ids), Employee.company_id == int(company_id))
+        .order_by(Employee.first_name.asc(), Employee.last_name.asc())
+        .all()
+    )
+
+    pay_date = context.get('pay_date') or ''
+    period_start = context.get('period_start') or ''
+    period_end = context.get('period_end') or ''
+
+    return render_template(
+        'owner_payroll_complete.html',
+        lines=lines,
+        pay_date=pay_date,
+        period_start=period_start,
+        period_end=period_end,
+    )
 
 
 @app.route('/admin/submissions', methods=['GET'])
