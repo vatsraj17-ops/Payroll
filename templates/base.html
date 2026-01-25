@@ -35,6 +35,8 @@
     </style>
   </head>
   <body style="min-height:100vh; display:flex; flex-direction:column;">
+    {% set hide_header = hide_header|default(false) %}
+    {% if not hide_header %}
     <header class="py-3 mb-1 border-bottom" style="background:#C3C3C3;">
       <div class="container d-flex align-items-center">
         <img src="{{ url_for('static', filename='logos/cropped-PB-tax-Logo-1.png') }}" alt="PB Tax Solutions Inc." style="height:84px; margin-right:20px; object-fit:contain; filter:brightness(0) saturate(100%) invert(13%) sepia(99%) saturate(7499%) hue-rotate(349deg) brightness(90%) contrast(110%);">
@@ -68,6 +70,7 @@
         </div>
       </div>
     </header>
+    {% endif %}
 
     <div class="container mt-1 mb-3">
       {% set role = session.get('role') %}
@@ -76,6 +79,7 @@
       {% set is_payroll = path.startswith('/payroll') or path.startswith('/data-entry') or path.startswith('/employees') or path.startswith('/companies') or path.startswith('/reports') or path.startswith('/manage/companies') or path.startswith('/manage/employees') or path.startswith('/manage/data') or path.startswith('/admin/submissions') or path.startswith('/owner/payroll') %}
       {% set hide_sidebar = hide_sidebar|default(false) %}
       {% set hide_nav = hide_nav|default(false) %}
+      {% set show_hamburger = show_hamburger|default(false) %}
       {% if not hide_nav %}
         <div class="d-flex gap-2 justify-content-center flex-wrap">
           <div class="nav-card"><a href="/">Home</a></div>
@@ -87,7 +91,42 @@
 
     <div class="container" style="flex:1 0 auto; max-width: 1100px;">
       <div class="row">
-        {% if not hide_sidebar %}
+        {% if show_hamburger %}
+          <div class="col-12 mb-3 d-flex justify-content-start">
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="offcanvas" data-bs-target="#leftMenu" aria-controls="leftMenu">
+              ☰ Menu
+            </button>
+          </div>
+
+          <div class="offcanvas offcanvas-start" tabindex="-1" id="leftMenu" aria-labelledby="leftMenuLabel">
+            <div class="offcanvas-header">
+              <h5 class="offcanvas-title" id="leftMenuLabel">Navigation</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            </div>
+            <div class="offcanvas-body">
+              <div class="mb-3">
+                <div class="fw-semibold mb-2">Main</div>
+                <ul class="mb-0" style="padding-left:1.1rem;">
+                  <li><a href="/" style="color:#000; text-decoration:none;">Home</a></li>
+                  <li><a href="/payroll" style="color:#000; text-decoration:none;">Run Payroll</a></li>
+                  <li><a href="/expenses" style="color:#000; text-decoration:none;">Expenses &amp; Bills</a></li>
+                </ul>
+              </div>
+              <div>
+                <div class="fw-semibold mb-2">Reports</div>
+                <ul class="mb-0" style="padding-left:1.1rem;">
+                  {% if role == 'admin' %}
+                    <li><a href="/reports" style="color:#000; text-decoration:none;">Reports</a></li>
+                  {% elif role == 'owner' %}
+                    <li><a href="/owner/reports" style="color:#000; text-decoration:none;">Reports</a></li>
+                  {% endif %}
+                </ul>
+              </div>
+            </div>
+          </div>
+        {% endif %}
+
+        {% if not hide_sidebar and not show_hamburger %}
           <div class="col-12 col-md-3 mb-3">
             <div style="background:#C3C3C3; border-left:4px solid #B0151A; border-radius:6px; padding:.7rem; font-size:0.9rem;">
               <div style="color:#B0151A; font-weight:600; margin-bottom:.4rem; font-size:0.9rem;">Navigation</div>
