@@ -2110,6 +2110,205 @@ def owner_payroll_complete():
     )
 
 
+@app.route('/owner/payroll/edit', methods=['GET'])
+@require_login
+def owner_payroll_edit():
+    if not _is_owner_session():
+        abort(403)
+
+    company_id = session.get('company_id')
+    if not company_id:
+        abort(403)
+
+    employees = (
+        Employee.query.filter(Employee.company_id == int(company_id))
+        .order_by(Employee.first_name, Employee.last_name)
+        .all()
+    )
+
+    employee_id = (request.args.get('employee_id') or '').strip()
+    date_from_raw = (request.args.get('date_from') or '').strip()
+    date_to_raw = (request.args.get('date_to') or '').strip()
+
+    date_from = None
+    date_to = None
+    if date_from_raw:
+        try:
+            date_from = datetime.date.fromisoformat(date_from_raw)
+        except Exception:
+            flash('From date must be a valid date.', 'danger')
+            return redirect(url_for('owner_payroll_edit'))
+
+    if date_to_raw:
+        try:
+            date_to = datetime.date.fromisoformat(date_to_raw)
+        except Exception:
+            flash('To date must be a valid date.', 'danger')
+            return redirect(url_for('owner_payroll_edit'))
+
+    if date_from and date_to and date_from > date_to:
+        flash('From date cannot be after To date.', 'danger')
+        return redirect(url_for('owner_payroll_edit'))
+
+    lines = []
+    if employee_id or date_from or date_to:
+        q = (
+            PayrollLine.query
+            .join(Employee)
+            .filter(Employee.company_id == int(company_id))
+        )
+        if employee_id:
+            try:
+                q = q.filter(PayrollLine.employee_id == int(employee_id))
+            except Exception:
+                flash('Employee must be valid.', 'danger')
+                return redirect(url_for('owner_payroll_edit'))
+        if date_from:
+            q = q.filter(PayrollLine.pay_date >= date_from)
+        if date_to:
+            q = q.filter(PayrollLine.pay_date <= date_to)
+        lines = (
+            q.order_by(PayrollLine.pay_date.desc(), PayrollLine.id.desc())
+            .limit(200)
+            .all()
+        )
+
+    next_url = request.full_path or url_for('owner_payroll_edit')
+    next_url_encoded = quote(next_url, safe='')
+
+    return render_template(
+        'owner_payroll_edit.html',
+        employees=employees,
+        lines=lines,
+        selected_employee_id=employee_id,
+        selected_date_from=date_from_raw,
+        selected_date_to=date_to_raw,
+        next_url_encoded=next_url_encoded,
+    )
+
+
+@app.route('/owner/payroll/line/<int:payroll_line_id>/edit', methods=['GET', 'POST'])
+@require_login
+def owner_edit_payroll_line(payroll_line_id: int):
+    if not _is_owner_session():
+        abort(403)
+
+    pl = db.session.get(PayrollLine, payroll_line_id)
+    if not pl:
+        abort(404)
+
+    employee = db.session.get(Employee, pl.employee_id) if pl.employee_id else None
+    if not employee or employee.company_id != session.get('company_id'):
+        abort(403)
+
+    def _parse_date(s):
+        if not s:
+            return None
+        try:
+            return datetime.date.fromisoformat(s)
+        except Exception:
+            return None
+
+    next_url = (request.args.get('next') or '').strip() or url_for('owner_payroll_edit')
+    next_url_encoded = quote(next_url, safe='')
+
+    if request.method == 'POST':
+        pay_date = _parse_date((request.form.get('pay_date') or '').strip())
+        period_start = _parse_date((request.form.get('period_start') or '').strip())
+        period_end = _parse_date((request.form.get('period_end') or '').strip())
+
+        if not pay_date:
+            pay_date = pl.pay_date or datetime.date.today()
+
+        hours_raw = (request.form.get('hours') or '').strip()
+        regular_gross_raw = (request.form.get('regular_gross') or '').strip()
+
+        hours = float(pl.hours or 0.0)
+        if hours_raw:
+            try:
+                hours = float(hours_raw)
+            except Exception:
+                flash('Hours must be a number.', 'danger')
+                return redirect(url_for('owner_edit_payroll_line', payroll_line_id=pl.id, next=next_url))
+        if hours < 0:
+            flash('Hours cannot be negative.', 'danger')
+            return redirect(url_for('owner_edit_payroll_line', payroll_line_id=pl.id, next=next_url))
+
+        regular_gross = None
+        if regular_gross_raw:
+            try:
+                regular_gross = float(regular_gross_raw)
+            except Exception:
+                flash('Gross (before vacation pay) must be a number.', 'danger')
+                return redirect(url_for('owner_edit_payroll_line', payroll_line_id=pl.id, next=next_url))
+
+        if regular_gross is None:
+            if employee and hours and float(employee.pay_rate or 0.0) > 0:
+                regular_gross = float(hours) * float(employee.pay_rate or 0.0)
+            else:
+                existing_regular = float(pl.gross or 0.0) - float(pl.vacation_pay or 0.0)
+                regular_gross = max(0.0, existing_regular)
+
+        if regular_gross < 0:
+            flash('Gross (before vacation pay) cannot be negative.', 'danger')
+            return redirect(url_for('owner_edit_payroll_line', payroll_line_id=pl.id, next=next_url))
+
+        pl.pay_date = pay_date
+        pl.period_start = period_start
+        pl.period_end = period_end
+        pl.hours = float(hours)
+
+        vacation_pay = 0.0
+        if employee and bool(getattr(employee, 'vacation_pay_enabled', False)):
+            vacation_pay = 0.04 * float(regular_gross or 0.0)
+        pl.vacation_pay = float(vacation_pay or 0.0)
+        pl.gross = float(regular_gross or 0.0) + float(vacation_pay or 0.0)
+
+        _recalculate_employee_payroll_lines(pl.employee_id)
+        db.session.commit()
+
+        flash('Payroll line updated.', 'success')
+        return redirect(next_url)
+
+    regular_gross = float(pl.gross or 0.0) - float(pl.vacation_pay or 0.0)
+    if regular_gross < 0:
+        regular_gross = float(pl.gross or 0.0)
+
+    return render_template(
+        'owner_edit_payroll_line.html',
+        pl=pl,
+        employee=employee,
+        regular_gross=round(float(regular_gross or 0.0), 2),
+        next_url=next_url,
+        next_url_encoded=next_url_encoded,
+    )
+
+
+@app.route('/owner/payroll/line/<int:payroll_line_id>/delete', methods=['POST'])
+@require_login
+def owner_delete_payroll_line(payroll_line_id: int):
+    if not _is_owner_session():
+        abort(403)
+
+    pl = db.session.get(PayrollLine, payroll_line_id)
+    if not pl:
+        abort(404)
+
+    employee = db.session.get(Employee, pl.employee_id) if pl.employee_id else None
+    if not employee or employee.company_id != session.get('company_id'):
+        abort(403)
+
+    employee_id = pl.employee_id
+    db.session.delete(pl)
+    db.session.flush()
+    _recalculate_employee_payroll_lines(employee_id)
+    db.session.commit()
+
+    flash('Payroll line deleted.', 'success')
+    next_url = (request.args.get('next') or '').strip() or url_for('owner_payroll_edit')
+    return redirect(next_url)
+
+
 @app.route('/owner/payroll-summary', methods=['GET'])
 @require_login
 def owner_payroll_summary():
