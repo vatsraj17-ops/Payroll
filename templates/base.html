@@ -75,11 +75,14 @@
       {% set is_expenses = path.startswith('/subcontracts') or path.startswith('/expenses') %}
       {% set is_payroll = path.startswith('/payroll') or path.startswith('/data-entry') or path.startswith('/employees') or path.startswith('/companies') or path.startswith('/reports') or path.startswith('/manage/companies') or path.startswith('/manage/employees') or path.startswith('/manage/data') or path.startswith('/admin/submissions') or path.startswith('/owner/payroll') %}
       {% set hide_sidebar = hide_sidebar|default(false) %}
-      <div class="d-flex gap-2 justify-content-center flex-wrap">
-        <div class="nav-card"><a href="/">Home</a></div>
-        <div class="nav-card"><a href="/payroll">Run Payroll</a></div>
-        <div class="nav-card"><a href="/expenses">Expenses &amp; Bills</a></div>
-      </div>
+      {% set hide_nav = hide_nav|default(false) %}
+      {% if not hide_nav %}
+        <div class="d-flex gap-2 justify-content-center flex-wrap">
+          <div class="nav-card"><a href="/">Home</a></div>
+          <div class="nav-card"><a href="/payroll">Run Payroll</a></div>
+          <div class="nav-card"><a href="/expenses">Expenses &amp; Bills</a></div>
+        </div>
+      {% endif %}
     </div>
 
     <div class="container" style="flex:1 0 auto; max-width: 1100px;">
