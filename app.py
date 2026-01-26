@@ -140,8 +140,7 @@ def _ensure_subcontract_bill_columns() -> None:
         return
 
 
-@app.before_first_request
-def _run_startup_migrations() -> None:
+with app.app_context():
     _ensure_subcontract_bill_columns()
 
 
