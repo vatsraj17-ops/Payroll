@@ -6,7 +6,7 @@ import datetime
 from flask_sqlalchemy import SQLAlchemy
 from models import db, Company, Employee, PayrollLine, User, PayrollSubmission, Subcontractor, SubcontractBill
 from calc import calculate_payroll
-from sqlalchemy import func
+from sqlalchemy import func, inspect, text
 import random
 from urllib.parse import quote, urlsplit
 from functools import wraps
@@ -109,6 +109,40 @@ if _is_production():
     app.config['SESSION_COOKIE_SECURE'] = True
 
 db.init_app(app)
+
+
+def _ensure_subcontract_bill_columns() -> None:
+    try:
+        inspector = inspect(db.engine)
+        if 'subcontract_bill' not in inspector.get_table_names():
+            return
+        existing = {c['name'] for c in inspector.get_columns('subcontract_bill')}
+        statements: list[str] = []
+        if 'period_start' not in existing:
+            statements.append('ALTER TABLE subcontract_bill ADD COLUMN period_start DATE')
+        if 'period_end' not in existing:
+            statements.append('ALTER TABLE subcontract_bill ADD COLUMN period_end DATE')
+        if 'due_date' not in existing:
+            statements.append('ALTER TABLE subcontract_bill ADD COLUMN due_date DATE')
+        if 'use_hours' not in existing:
+            statements.append('ALTER TABLE subcontract_bill ADD COLUMN use_hours BOOLEAN DEFAULT 0')
+        if 'hours' not in existing:
+            statements.append('ALTER TABLE subcontract_bill ADD COLUMN hours FLOAT DEFAULT 0')
+        if 'taxable' not in existing:
+            statements.append('ALTER TABLE subcontract_bill ADD COLUMN taxable BOOLEAN DEFAULT 1')
+
+        if statements:
+            with db.engine.begin() as conn:
+                for stmt in statements:
+                    conn.execute(text(stmt))
+    except Exception:
+        # Avoid crashing app startup if migration fails; rely on logs for diagnosis.
+        return
+
+
+@app.before_first_request
+def _run_startup_migrations() -> None:
+    _ensure_subcontract_bill_columns()
 
 
 @app.after_request
