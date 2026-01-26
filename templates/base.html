@@ -80,6 +80,7 @@
       {% set hide_sidebar = hide_sidebar|default(false) %}
       {% set hide_nav = hide_nav|default(false) %}
       {% set show_hamburger = show_hamburger|default(false) %}
+      {% set expenses_menu_mode = expenses_menu_mode|default('expenses') %}
       {% if not hide_nav %}
         <div class="d-flex gap-2 justify-content-center flex-wrap">
           <div class="nav-card"><a href="/">Home</a></div>
@@ -104,7 +105,7 @@
               <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
             </div>
             <div class="offcanvas-body">
-              {% if is_expenses %}
+              {% if is_expenses and expenses_menu_mode != 'payroll' %}
                 <div class="mb-3">
                   <div class="fw-semibold mb-2">Expenses</div>
                   <ul class="mb-0" style="padding-left:1.1rem;">
