@@ -100,13 +100,13 @@
 
           <div class="offcanvas offcanvas-start" tabindex="-1" id="leftMenu" aria-labelledby="leftMenuLabel">
             <div class="offcanvas-header">
-              <h5 class="offcanvas-title" id="leftMenuLabel">Navigation</h5>
+              <h5 class="offcanvas-title" id="leftMenuLabel">{% if is_expenses %}Bills &amp; Payments{% else %}Navigation{% endif %}</h5>
               <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
             </div>
             <div class="offcanvas-body">
               {% if is_expenses %}
                 <div class="mb-3">
-                  <div class="fw-semibold mb-2">Navigation</div>
+                  <div class="fw-semibold mb-2">Expenses</div>
                   <ul class="mb-0" style="padding-left:1.1rem;">
                     <li><a href="/" style="color:#000; text-decoration:none;">Home</a></li>
                     <li><a href="/expenses" style="color:#000; text-decoration:none;">Expenses</a></li>
