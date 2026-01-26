@@ -104,31 +104,40 @@
               <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
             </div>
             <div class="offcanvas-body">
-              <div class="mb-3">
-                <div class="fw-semibold mb-2">Main</div>
-                <ul class="mb-0" style="padding-left:1.1rem;">
-                  <li><a href="/" style="color:#000; text-decoration:none;">Home</a></li>
-                  <li><a href="/payroll" style="color:#000; text-decoration:none;">Run Payroll</a></li>
-                  {% if is_expenses %}
-                    <li><a href="/expenses" style="color:#000; text-decoration:none;">Expenses &amp; Bills</a></li>
-                  {% endif %}
-                  <li><a href="/manage/employees" style="color:#000; text-decoration:none;">Edit Employee</a></li>
-                  {% if role == 'owner' %}
-                    <li><a href="/owner/payroll/edit" style="color:#000; text-decoration:none;">Edit Payroll</a></li>
-                  {% endif %}
-                </ul>
-              </div>
-              <div>
-                <div class="fw-semibold mb-2">Reports</div>
-                <ul class="mb-0" style="padding-left:1.1rem;">
-                  {% if role == 'admin' %}
-                    <li><a href="/reports" style="color:#000; text-decoration:none;">Reports</a></li>
-                  {% elif role == 'owner' %}
-                    <li><a href="/owner/reports" style="color:#000; text-decoration:none;">Reports</a></li>
-                    <li><a href="/owner/payroll-summary" style="color:#000; text-decoration:none;">Payroll Summary</a></li>
-                  {% endif %}
-                </ul>
-              </div>
+              {% if is_expenses %}
+                <div class="mb-3">
+                  <div class="fw-semibold mb-2">Navigation</div>
+                  <ul class="mb-0" style="padding-left:1.1rem;">
+                    <li><a href="/" style="color:#000; text-decoration:none;">Home</a></li>
+                    <li><a href="/subcontracts/new" style="color:#000; text-decoration:none;">Suppliers</a></li>
+                    <li><a href="/subcontracts/bills" style="color:#000; text-decoration:none;">Bills</a></li>
+                    <li><a href="/subcontracts/reports" style="color:#000; text-decoration:none;">Reports</a></li>
+                  </ul>
+                </div>
+              {% else %}
+                <div class="mb-3">
+                  <div class="fw-semibold mb-2">Main</div>
+                  <ul class="mb-0" style="padding-left:1.1rem;">
+                    <li><a href="/" style="color:#000; text-decoration:none;">Home</a></li>
+                    <li><a href="/payroll" style="color:#000; text-decoration:none;">Run Payroll</a></li>
+                    <li><a href="/manage/employees" style="color:#000; text-decoration:none;">Edit Employee</a></li>
+                    {% if role == 'owner' %}
+                      <li><a href="/owner/payroll/edit" style="color:#000; text-decoration:none;">Edit Payroll</a></li>
+                    {% endif %}
+                  </ul>
+                </div>
+                <div>
+                  <div class="fw-semibold mb-2">Reports</div>
+                  <ul class="mb-0" style="padding-left:1.1rem;">
+                    {% if role == 'admin' %}
+                      <li><a href="/reports" style="color:#000; text-decoration:none;">Reports</a></li>
+                    {% elif role == 'owner' %}
+                      <li><a href="/owner/reports" style="color:#000; text-decoration:none;">Reports</a></li>
+                      <li><a href="/owner/payroll-summary" style="color:#000; text-decoration:none;">Payroll Summary</a></li>
+                    {% endif %}
+                  </ul>
+                </div>
+              {% endif %}
             </div>
           </div>
         {% endif %}
