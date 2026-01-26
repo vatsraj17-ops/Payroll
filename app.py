@@ -705,6 +705,7 @@ def payroll_home():
 @app.route('/expenses', methods=['GET'])
 @require_login
 def expenses_home():
+    _ensure_subcontract_bill_columns()
     today = datetime.date.today()
     date_from = today - datetime.timedelta(days=14)
 
@@ -1071,6 +1072,7 @@ def new_subcontractor():
 @app.route('/subcontracts/bills', methods=['GET', 'POST'])
 @require_login
 def subcontract_bills():
+    _ensure_subcontract_bill_columns()
     if _is_admin_session():
         companies = Company.query.order_by(Company.name).all()
     else:
@@ -1254,6 +1256,7 @@ def subcontract_bills():
 @app.route('/subcontracts/reports', methods=['GET', 'POST'])
 @require_login
 def subcontract_reports():
+    _ensure_subcontract_bill_columns()
     if _is_admin_session():
         companies = Company.query.order_by(Company.name).all()
     else:
@@ -1325,6 +1328,7 @@ def subcontract_reports():
 @app.route('/subcontracts/reports/pdf', methods=['GET'])
 @require_login
 def subcontract_reports_pdf():
+    _ensure_subcontract_bill_columns()
     import io
     from reportlab.lib.pagesizes import letter
     from reportlab.lib.units import inch
