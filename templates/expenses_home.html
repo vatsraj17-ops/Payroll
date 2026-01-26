@@ -1,101 +1,58 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
   <div>
-    <h2 class="mb-1">Expenses &amp; Bills</h2>
-    <div class="text-muted" style="font-size:0.95rem;">Track subcontract expenses separately from payroll.</div>
+    <h2 class="mb-0">Expenses</h2>
   </div>
   <div class="d-flex gap-2">
-    <a class="btn btn-outline-primary btn-sm" href="/subcontracts/new">New Supplier</a>
-    <a class="btn btn-primary btn-sm" href="/subcontracts/bills">Add Bill</a>
+    <a class="btn btn-outline-success btn-sm" href="/subcontracts/bills">Print Cheques</a>
+    <a class="btn btn-success btn-sm" href="/subcontracts/bills">New transaction</a>
   </div>
 </div>
 
-<div class="row g-3 mt-2">
-  <div class="col-12 col-lg-6">
-    <div class="card card-accent">
-      <div class="card-body">
-        <div class="fw-semibold mb-2">Expense Transactions</div>
-        <div class="text-muted" style="font-size:0.9rem; margin-bottom:.5rem;">All subcontract bills and payments.</div>
-        <a class="accent-link" href="/subcontracts/bills">Open transactions</a>
-      </div>
-    </div>
-  </div>
-  <div class="col-12 col-lg-6">
-    <div class="card card-accent">
-      <div class="card-body">
-        <div class="fw-semibold mb-2">Suppliers</div>
-        <div class="text-muted" style="font-size:0.9rem; margin-bottom:.5rem;">Manage subcontract suppliers.</div>
-        <a class="accent-link" href="/subcontracts/new">Manage suppliers</a>
-      </div>
-    </div>
-  </div>
-  <div class="col-12 col-lg-6">
-    <div class="card card-accent">
-      <div class="card-body">
-        <div class="fw-semibold mb-2">Bills</div>
-        <div class="text-muted" style="font-size:0.9rem; margin-bottom:.5rem;">Record new bills and payments.</div>
-        <a class="accent-link" href="/subcontracts/bills">View bills</a>
-      </div>
-    </div>
-  </div>
-  <div class="col-12 col-lg-6">
-    <div class="card card-accent">
-      <div class="card-body">
-        <div class="fw-semibold mb-2">Reports</div>
-        <div class="text-muted" style="font-size:0.9rem; margin-bottom:.5rem;">Subcontract expense reports.</div>
-        <a class="accent-link" href="/subcontracts/reports">Open reports</a>
-      </div>
-    </div>
-  </div>
+<div class="d-flex align-items-center gap-2 flex-wrap mb-3">
+  <select class="form-select form-select-sm" style="max-width:180px;">
+    <option>All transactions</option>
+  </select>
+  <button class="btn btn-outline-secondary btn-sm">Filter</button>
+  <span class="badge text-bg-light" style="border:1px solid #d0d5dd;">Dates: Last 2 weeks</span>
+  <span class="text-muted" style="font-size:0.9rem;">{{ date_from }} to {{ date_to }}</span>
 </div>
 
-<div class="mt-4">
-  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-    <h4 class="mb-0">Recent entries (last 2 weeks)</h4>
-    <div class="text-muted" style="font-size:0.9rem;">{{ date_from }} to {{ date_to }}</div>
-  </div>
-
-  {% if bills and bills|length > 0 %}
-    <div class="d-flex gap-3 flex-wrap mb-2 mt-2">
-      <div><span class="text-muted">Subtotal:</span> <strong>{{ totals.amount | money }}</strong></div>
-      <div><span class="text-muted">GST/HST:</span> <strong>{{ totals.gst | money }}</strong></div>
-      <div><span class="text-muted">Total:</span> <strong>{{ totals.total | money }}</strong></div>
-    </div>
-    <div class="table-responsive">
-      <table class="table table-sm align-middle">
-        <thead>
+{% if bills and bills|length > 0 %}
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th style="width:36px;"><input type="checkbox" disabled></th>
+          <th>Date</th>
+          <th>Type</th>
+          <th>No.</th>
+          <th>Payee</th>
+          <th>Category</th>
+          <th class="text-end">Total before sales tax</th>
+          <th class="text-end">Sales tax</th>
+          <th class="text-end">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bills %}
           <tr>
-            <th>Date</th>
-            {% if session.get('role') == 'admin' %}
-              <th>Company</th>
-            {% endif %}
-            <th>Supplier</th>
-            <th>Description</th>
-            <th class="text-end">Amount</th>
-            <th class="text-end">GST/HST</th>
-            <th class="text-end">Total</th>
+            <td><input type="checkbox" disabled></td>
+            <td>{{ b.bill_date }}</td>
+            <td>Bill</td>
+            <td>{{ b.id }}</td>
+            <td>{{ b.subcontractor.contractor_company_name if b.subcontractor else '' }}</td>
+            <td>{{ b.description or 'Subcontract' }}</td>
+            <td class="text-end">{{ (b.amount or 0) | money }}</td>
+            <td class="text-end">{{ (b.gst_amount or 0) | money }}</td>
+            <td class="text-end">{{ (b.total or 0) | money }}</td>
           </tr>
-        </thead>
-        <tbody>
-          {% for b in bills %}
-            <tr>
-              <td>{{ b.bill_date }}</td>
-              {% if session.get('role') == 'admin' %}
-                <td>{{ b.company.name if b.company else '' }}</td>
-              {% endif %}
-              <td>{{ b.subcontractor.contractor_company_name if b.subcontractor else '' }}</td>
-              <td>{{ b.description or '' }}</td>
-              <td class="text-end">{{ (b.amount or 0) | money }}</td>
-              <td class="text-end">{{ (b.gst_amount or 0) | money }}</td>
-              <td class="text-end">{{ (b.total or 0) | money }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% else %}
-    <p class="text-muted mt-2">No entries in the last 2 weeks.</p>
-  {% endif %}
-</div>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p class="text-muted">No entries in the last 2 weeks.</p>
+{% endif %}
 {% endblock %}
