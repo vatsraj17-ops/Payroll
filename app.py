@@ -116,25 +116,24 @@ def _ensure_subcontract_bill_columns() -> None:
         inspector = inspect(db.engine)
         if 'subcontract_bill' not in inspector.get_table_names():
             return
-        existing = {c['name'] for c in inspector.get_columns('subcontract_bill')}
-        statements: list[str] = []
-        if 'period_start' not in existing:
-            statements.append('ALTER TABLE subcontract_bill ADD COLUMN period_start DATE')
-        if 'period_end' not in existing:
-            statements.append('ALTER TABLE subcontract_bill ADD COLUMN period_end DATE')
-        if 'due_date' not in existing:
-            statements.append('ALTER TABLE subcontract_bill ADD COLUMN due_date DATE')
-        if 'use_hours' not in existing:
-            statements.append('ALTER TABLE subcontract_bill ADD COLUMN use_hours BOOLEAN DEFAULT 0')
-        if 'hours' not in existing:
-            statements.append('ALTER TABLE subcontract_bill ADD COLUMN hours FLOAT DEFAULT 0')
-        if 'taxable' not in existing:
-            statements.append('ALTER TABLE subcontract_bill ADD COLUMN taxable BOOLEAN DEFAULT 1')
 
-        if statements:
-            with db.engine.begin() as conn:
-                for stmt in statements:
+        statements = [
+            'ALTER TABLE subcontract_bill ADD COLUMN IF NOT EXISTS period_start DATE',
+            'ALTER TABLE subcontract_bill ADD COLUMN IF NOT EXISTS period_end DATE',
+            'ALTER TABLE subcontract_bill ADD COLUMN IF NOT EXISTS due_date DATE',
+            'ALTER TABLE subcontract_bill ADD COLUMN IF NOT EXISTS use_hours BOOLEAN DEFAULT 0',
+            'ALTER TABLE subcontract_bill ADD COLUMN IF NOT EXISTS hours FLOAT DEFAULT 0',
+            'ALTER TABLE subcontract_bill ADD COLUMN IF NOT EXISTS taxable BOOLEAN DEFAULT 1',
+        ]
+
+        with db.engine.begin() as conn:
+            for stmt in statements:
+                try:
                     conn.execute(text(stmt))
+                except Exception:
+                    # Fallback for engines without IF NOT EXISTS support
+                    if 'IF NOT EXISTS' in stmt:
+                        conn.execute(text(stmt.replace(' IF NOT EXISTS', '')))
     except Exception:
         # Avoid crashing app startup if migration fails; rely on logs for diagnosis.
         return
@@ -3010,6 +3009,14 @@ def reports():
         selected_date_from=selected_date_from,
         selected_date_to=selected_date_to,
     )
+
+
+@app.route('/admin/maintenance/migrate_subcontract_bills', methods=['GET'])
+@require_admin
+def migrate_subcontract_bills():
+    _ensure_subcontract_bill_columns()
+    flash('Subcontract bill columns migration attempted. Refresh the page.', 'success')
+    return redirect(url_for('reports'))
 
 
 def _generate_paystubs_pdf(lines: list[PayrollLine]) -> bytes:
