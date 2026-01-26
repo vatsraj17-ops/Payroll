@@ -138,11 +138,15 @@
             <div style="background:#C3C3C3; border-left:4px solid #B0151A; border-radius:6px; padding:.7rem; font-size:0.9rem;">
               <div style="color:#B0151A; font-weight:600; margin-bottom:.4rem; font-size:0.9rem;">Navigation</div>
               {% if is_expenses and not is_payroll %}
-                <div style="color:#B0151A; font-weight:600; margin-bottom:.5rem;">Sub-Contractor</div>
+                <div style="color:#B0151A; font-weight:600; margin-bottom:.5rem;">Navigation</div>
                 <ul class="mb-0" style="padding-left:1.1rem;">
-                  <li><a href="/subcontracts/new" style="color:#000; text-decoration:none;">New Supplier</a></li>
-                  <li><a href="/subcontracts/bills" style="color:#000; text-decoration:none;">Pay Bills</a></li>
-                  <li><a href="/subcontracts/reports" style="color:#000; text-decoration:none;">Reports</a></li>
+                  <li><a href="/" style="color:#000; text-decoration:none;">Home</a></li>
+                  <li><a href="/payroll" style="color:#000; text-decoration:none;">Run Payroll</a></li>
+                  {% if role == 'admin' %}
+                    <li><a href="/reports" style="color:#000; text-decoration:none;">Reports</a></li>
+                  {% elif role == 'owner' %}
+                    <li><a href="/owner/reports" style="color:#000; text-decoration:none;">Reports</a></li>
+                  {% endif %}
                 </ul>
               {% elif is_payroll and not is_expenses %}
                 <div style="color:#B0151A; font-weight:600; margin-bottom:.5rem;">Run Payroll</div>

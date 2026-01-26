@@ -49,4 +49,53 @@
     </div>
   </div>
 </div>
+
+<div class="mt-4">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <h4 class="mb-0">Recent entries (last 2 weeks)</h4>
+    <div class="text-muted" style="font-size:0.9rem;">{{ date_from }} to {{ date_to }}</div>
+  </div>
+
+  {% if bills and bills|length > 0 %}
+    <div class="d-flex gap-3 flex-wrap mb-2 mt-2">
+      <div><span class="text-muted">Subtotal:</span> <strong>{{ totals.amount | money }}</strong></div>
+      <div><span class="text-muted">GST/HST:</span> <strong>{{ totals.gst | money }}</strong></div>
+      <div><span class="text-muted">Total:</span> <strong>{{ totals.total | money }}</strong></div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>Date</th>
+            {% if session.get('role') == 'admin' %}
+              <th>Company</th>
+            {% endif %}
+            <th>Supplier</th>
+            <th>Description</th>
+            <th class="text-end">Amount</th>
+            <th class="text-end">GST/HST</th>
+            <th class="text-end">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in bills %}
+            <tr>
+              <td>{{ b.bill_date }}</td>
+              {% if session.get('role') == 'admin' %}
+                <td>{{ b.company.name if b.company else '' }}</td>
+              {% endif %}
+              <td>{{ b.subcontractor.contractor_company_name if b.subcontractor else '' }}</td>
+              <td>{{ b.description or '' }}</td>
+              <td class="text-end">{{ (b.amount or 0) | money }}</td>
+              <td class="text-end">{{ (b.gst_amount or 0) | money }}</td>
+              <td class="text-end">{{ (b.total or 0) | money }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="text-muted mt-2">No entries in the last 2 weeks.</p>
+  {% endif %}
+</div>
 {% endblock %}

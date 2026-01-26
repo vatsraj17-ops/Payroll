@@ -672,7 +672,45 @@ def payroll_home():
 @app.route('/expenses', methods=['GET'])
 @require_login
 def expenses_home():
-    return render_template('expenses_home.html')
+    today = datetime.date.today()
+    date_from = today - datetime.timedelta(days=14)
+
+    bills = []
+    if _is_admin_session():
+        bills = (
+            SubcontractBill.query
+            .join(Subcontractor)
+            .filter(SubcontractBill.bill_date >= date_from)
+            .order_by(SubcontractBill.bill_date.desc(), SubcontractBill.id.desc())
+            .limit(200)
+            .all()
+        )
+    else:
+        cid = session.get('company_id')
+        if cid:
+            bills = (
+                SubcontractBill.query
+                .join(Subcontractor)
+                .filter(SubcontractBill.company_id == int(cid))
+                .filter(SubcontractBill.bill_date >= date_from)
+                .order_by(SubcontractBill.bill_date.desc(), SubcontractBill.id.desc())
+                .limit(200)
+                .all()
+            )
+
+    totals = {
+        'amount': sum(float(b.amount or 0.0) for b in bills),
+        'gst': sum(float(b.gst_amount or 0.0) for b in bills),
+        'total': sum(float(b.total or 0.0) for b in bills),
+    }
+
+    return render_template(
+        'expenses_home.html',
+        bills=bills,
+        totals=totals,
+        date_from=date_from,
+        date_to=today,
+    )
 
 
 @app.route('/employees', methods=['GET', 'POST'])
