@@ -139,6 +139,18 @@ def _ensure_subcontract_bill_columns() -> None:
         return
 
 
+def _is_subcontract_bill_schema_ready() -> bool:
+    try:
+        inspector = inspect(db.engine)
+        if 'subcontract_bill' not in inspector.get_table_names():
+            return False
+        existing = {c['name'] for c in inspector.get_columns('subcontract_bill')}
+        required = {'period_start', 'period_end', 'due_date', 'use_hours', 'hours', 'taxable'}
+        return required.issubset(existing)
+    except Exception:
+        return False
+
+
 with app.app_context():
     _ensure_subcontract_bill_columns()
 
@@ -705,11 +717,12 @@ def payroll_home():
 @require_login
 def expenses_home():
     _ensure_subcontract_bill_columns()
+    schema_ready = _is_subcontract_bill_schema_ready()
     today = datetime.date.today()
     date_from = today - datetime.timedelta(days=14)
 
     bills = []
-    if _is_admin_session():
+    if schema_ready and _is_admin_session():
         bills = (
             SubcontractBill.query
             .join(Subcontractor)
@@ -718,7 +731,7 @@ def expenses_home():
             .limit(200)
             .all()
         )
-    else:
+    elif schema_ready:
         cid = session.get('company_id')
         if cid:
             bills = (
@@ -743,6 +756,7 @@ def expenses_home():
         totals=totals,
         date_from=date_from,
         date_to=today,
+        schema_ready=schema_ready,
     )
 
 
@@ -1072,6 +1086,7 @@ def new_subcontractor():
 @require_login
 def subcontract_bills():
     _ensure_subcontract_bill_columns()
+    schema_ready = _is_subcontract_bill_schema_ready()
     if _is_admin_session():
         companies = Company.query.order_by(Company.name).all()
     else:
@@ -1106,6 +1121,9 @@ def subcontract_bills():
     subcontractors = subs_query.order_by(Subcontractor.contractor_company_name.asc()).all()
 
     if request.method == 'POST':
+        if not schema_ready:
+            flash('Bills schema is updating. Run the migration and retry.', 'danger')
+            return redirect(url_for('subcontract_bills'))
         bill_date_raw = (request.form.get('bill_date') or '').strip()
         period_start_raw = (request.form.get('period_start') or '').strip()
         period_end_raw = (request.form.get('period_end') or '').strip()
@@ -1219,7 +1237,7 @@ def subcontract_bills():
 
     bills = []
     totals = {'amount': 0.0, 'gst': 0.0, 'total': 0.0}
-    if run == '1':
+    if run == '1' and schema_ready:
         q = SubcontractBill.query
         if company_id_int is not None:
             q = q.filter(SubcontractBill.company_id == company_id_int)
@@ -1249,6 +1267,7 @@ def subcontract_bills():
         selected_date_from=date_from,
         selected_date_to=date_to,
         run=run,
+        schema_ready=schema_ready,
     )
 
 
@@ -1256,6 +1275,7 @@ def subcontract_bills():
 @require_login
 def subcontract_reports():
     _ensure_subcontract_bill_columns()
+    schema_ready = _is_subcontract_bill_schema_ready()
     if _is_admin_session():
         companies = Company.query.order_by(Company.name).all()
     else:
@@ -1291,7 +1311,7 @@ def subcontract_reports():
 
     bills = []
     totals = {'amount': 0.0, 'gst': 0.0, 'total': 0.0}
-    if run == '1' or request.method == 'POST':
+    if (run == '1' or request.method == 'POST') and schema_ready:
         q = SubcontractBill.query
         if company_id_int is not None:
             q = q.filter(SubcontractBill.company_id == company_id_int)
@@ -1321,6 +1341,7 @@ def subcontract_reports():
         selected_date_from=date_from,
         selected_date_to=date_to,
         run=run,
+        schema_ready=schema_ready,
     )
 
 
@@ -1328,6 +1349,8 @@ def subcontract_reports():
 @require_login
 def subcontract_reports_pdf():
     _ensure_subcontract_bill_columns()
+    if not _is_subcontract_bill_schema_ready():
+        abort(503)
     import io
     from reportlab.lib.pagesizes import letter
     from reportlab.lib.units import inch

@@ -3,6 +3,11 @@
 {% set hide_sidebar = true %}
 {% set show_hamburger = true %}
 {% block content %}
+{% if schema_ready is defined and not schema_ready %}
+  <div class="alert alert-warning">
+    Bills schema is updating. Please run the admin migration and refresh this page.
+  </div>
+{% endif %}
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
   <div>
     <h2 class="mb-0">Bills &amp; Payments</h2>
