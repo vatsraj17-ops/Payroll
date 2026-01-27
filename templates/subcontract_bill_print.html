@@ -24,6 +24,9 @@
         margin: 32px auto 48px;
         padding: 0 24px;
       }
+      .spacer-lg {
+        height: 12px;
+      }
       .print-controls {
         display: flex;
         justify-content: center;
@@ -79,10 +82,6 @@
         gap: 16px;
         margin-bottom: 18px;
       }
-      .supplier-block .label {
-        font-size: 12px;
-        color: #6b7280;
-      }
       .divider {
         border-top: 2px solid var(--line);
         margin: 16px 0;
@@ -99,6 +98,9 @@
         font-weight: 600;
         padding: 8px 10px;
         border-bottom: 1px solid var(--line);
+      }
+      thead th.num {
+        text-align: right;
       }
       tbody td {
         padding: 10px;
@@ -134,6 +136,9 @@
         padding-top: 8px;
         margin-top: 6px;
       }
+      @page {
+        margin: 12mm;
+      }
       @media print {
         .print-controls {
           display: none;
@@ -154,27 +159,48 @@
       <div class="header">
         <div class="company">
           <div class="company-name">{{ bill.company.name if bill.company else '' }}</div>
+          {% if bill.company and bill.company.address %}
+            {% set company_lines = bill.company.address.split('\n') if '\n' in bill.company.address else bill.company.address.split(',') %}
+            {% for line in company_lines %}
+              {% if line.strip() %}
+                <div>{{ line.strip() }}</div>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
           {% if bill.company and bill.company.business_number %}
             <div>{{ bill.company.business_number }}</div>
           {% endif %}
         </div>
         <div class="bill-meta">
-          <div class="row"><div class="label">Bill Date</div><div>{{ bill.bill_date.strftime('%d/%m/%Y') if bill.bill_date else '' }}</div></div>
+          <div class="row">
+            <div class="label">Period</div>
+            <div>
+              {{ bill.period_start.strftime('%d/%m/%Y') if bill.period_start else '' }}
+              {% if bill.period_start or bill.period_end %} - {% endif %}
+              {{ bill.period_end.strftime('%d/%m/%Y') if bill.period_end else '' }}
+            </div>
+          </div>
           <div class="row"><div class="label">Due Date</div><div>{{ bill.due_date.strftime('%d/%m/%Y') if bill.due_date else '' }}</div></div>
         </div>
       </div>
+
+      <div class="spacer-lg"></div>
 
       <div class="title">Bill</div>
 
       <div class="supplier-block">
         <div>
-          <div class="label">Supplier</div>
           <div style="font-weight:600; margin-top:4px;">{{ bill.subcontractor.contractor_company_name if bill.subcontractor else '' }}</div>
           {% if bill.subcontractor and bill.subcontractor.address %}
-            <div style="font-size:12px; color:#6b7280; margin-top:4px;">{{ bill.subcontractor.address }}</div>
+            {% set addr_lines = bill.subcontractor.address.split('\n') if '\n' in bill.subcontractor.address else bill.subcontractor.address.split(',') %}
+            {% for line in addr_lines %}
+              {% if line.strip() %}
+                <div style="font-size:12px; color:#6b7280;">{{ line.strip() }}</div>
+              {% endif %}
+            {% endfor %}
           {% endif %}
           {% if bill.subcontractor and bill.subcontractor.tax_number %}
-            <div style="font-size:12px; color:#6b7280;">{{ bill.subcontractor.tax_number }}</div>
+            <div style="font-size:12px; color:#6b7280;">HST number # {{ bill.subcontractor.tax_number }} RT 0001</div>
           {% endif %}
         </div>
       </div>
