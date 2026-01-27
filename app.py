@@ -1324,6 +1324,130 @@ def subcontract_bill_print(bill_id: int):
     )
 
 
+@app.route('/subcontracts/bills/<int:bill_id>/edit', methods=['GET', 'POST'])
+@require_login
+def edit_subcontract_bill(bill_id: int):
+    _ensure_subcontract_bill_columns()
+    bill = db.session.get(SubcontractBill, bill_id)
+    if not bill:
+        abort(404)
+
+    if not _is_admin_session():
+        cid = session.get('company_id')
+        if not cid or int(cid) != int(bill.company_id or 0):
+            abort(403)
+
+    company_id_int = int(bill.company_id or 0)
+    company = db.session.get(Company, company_id_int)
+
+    subcontractors = (
+        Subcontractor.query
+        .filter(Subcontractor.company_id == company_id_int)
+        .order_by(Subcontractor.contractor_company_name.asc())
+        .all()
+    )
+
+    if request.method == 'POST':
+        bill_date_raw = (request.form.get('bill_date') or '').strip()
+        period_start_raw = (request.form.get('period_start') or '').strip()
+        period_end_raw = (request.form.get('period_end') or '').strip()
+        due_date_raw = (request.form.get('due_date') or '').strip()
+        amount_raw = (request.form.get('amount') or '').strip()
+        hours_raw = (request.form.get('hours') or '').strip()
+        description = (request.form.get('description') or '').strip()
+        sub_id_raw = (request.form.get('subcontractor_id') or '').strip()
+        use_hours = (request.form.get('use_hours') or '').strip().lower() in {'1', 'true', 'on', 'yes'}
+        taxable = (request.form.get('taxable') or '').strip().lower() in {'1', 'true', 'on', 'yes'}
+
+        bill_date = _parse_date(bill_date_raw)
+        if not bill_date:
+            flash('Bill date is required.', 'danger')
+            return redirect(url_for('edit_subcontract_bill', bill_id=bill.id))
+
+        period_start = _parse_date(period_start_raw) if period_start_raw else None
+        period_end = _parse_date(period_end_raw) if period_end_raw else None
+        due_date = _parse_date(due_date_raw) if due_date_raw else None
+        if period_start_raw and not period_start:
+            flash('Period from must be a valid date.', 'danger')
+            return redirect(url_for('edit_subcontract_bill', bill_id=bill.id))
+        if period_end_raw and not period_end:
+            flash('Period to must be a valid date.', 'danger')
+            return redirect(url_for('edit_subcontract_bill', bill_id=bill.id))
+        if due_date_raw and not due_date:
+            flash('Due date must be a valid date.', 'danger')
+            return redirect(url_for('edit_subcontract_bill', bill_id=bill.id))
+
+        if period_start and period_end and period_start > period_end:
+            flash('Period from cannot be after period to.', 'danger')
+            return redirect(url_for('edit_subcontract_bill', bill_id=bill.id))
+
+        try:
+            sub_id = int(sub_id_raw)
+        except Exception:
+            flash('Supplier selection is invalid.', 'danger')
+            return redirect(url_for('edit_subcontract_bill', bill_id=bill.id))
+
+        subcontractor = db.session.get(Subcontractor, sub_id)
+        if not subcontractor or int(subcontractor.company_id or 0) != company_id_int:
+            flash('Supplier does not belong to this company.', 'danger')
+            return redirect(url_for('edit_subcontract_bill', bill_id=bill.id))
+
+        amount = 0.0
+        hours = 0.0
+        if use_hours:
+            try:
+                hours = float(hours_raw)
+            except Exception:
+                flash('Hours must be a number.', 'danger')
+                return redirect(url_for('edit_subcontract_bill', bill_id=bill.id))
+            if hours <= 0:
+                flash('Hours must be greater than 0.', 'danger')
+                return redirect(url_for('edit_subcontract_bill', bill_id=bill.id))
+            rate = float(subcontractor.contract_rate or 0.0)
+            if rate <= 0:
+                flash('Supplier hourly rate is missing. Update the supplier first.', 'danger')
+                return redirect(url_for('edit_subcontract_bill', bill_id=bill.id))
+            amount = hours * rate
+        else:
+            try:
+                amount = float(amount_raw)
+            except Exception:
+                flash('Amount must be a number.', 'danger')
+                return redirect(url_for('edit_subcontract_bill', bill_id=bill.id))
+            if amount <= 0:
+                flash('Amount must be greater than 0.', 'danger')
+                return redirect(url_for('edit_subcontract_bill', bill_id=bill.id))
+
+        gst_rate = float(subcontractor.gst_rate or 0.13)
+        gst_amount = amount * gst_rate if taxable else 0.0
+        total = amount + gst_amount
+
+        bill.subcontractor_id = subcontractor.id
+        bill.bill_date = bill_date
+        bill.period_start = period_start
+        bill.period_end = period_end
+        bill.due_date = due_date
+        bill.use_hours = use_hours
+        bill.hours = hours
+        bill.taxable = taxable
+        bill.description = description or None
+        bill.amount = amount
+        bill.gst_rate = gst_rate
+        bill.gst_amount = gst_amount
+        bill.total = total
+
+        db.session.commit()
+        flash('Bill updated.', 'success')
+        return redirect(url_for('subcontract_bills', run='1', company_id=company_id_int, subcontractor_id=sub_id, bill_id=bill.id))
+
+    return render_template(
+        'edit_subcontract_bill.html',
+        bill=bill,
+        company=company,
+        subcontractors=subcontractors,
+    )
+
+
 @app.route('/subcontracts/reports', methods=['GET', 'POST'])
 @require_login
 def subcontract_reports():

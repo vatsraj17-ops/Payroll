@@ -146,6 +146,7 @@
         <th class="text-end">Amount</th>
         <th class="text-end">GST/HST</th>
         <th class="text-end">Total</th>
+        <th style="width:90px;" class="text-end">Edit</th>
         <th style="width:90px;" class="text-end">Print</th>
       </tr>
     </thead>
@@ -159,6 +160,9 @@
           <td class="text-end">{{ (b.amount or 0) | money }}</td>
           <td class="text-end">{{ (b.gst_amount or 0) | money }}</td>
           <td class="text-end">{{ (b.total or 0) | money }}</td>
+          <td class="text-end">
+            <a class="btn btn-outline-secondary btn-sm" href="/subcontracts/bills/{{ b.id }}/edit">Edit</a>
+          </td>
           <td class="text-end">
             <a class="btn btn-outline-success btn-sm" href="/subcontracts/bills/{{ b.id }}/print" target="_blank">Print</a>
           </td>

@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% set hide_nav = true %}
+{% set hide_sidebar = true %}
+{% set show_hamburger = true %}
+{% set expenses_menu_mode = 'payroll' %}
+{% block content %}
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+  <div>
+    <h2 class="mb-1">Edit Bill</h2>
+    <div class="text-muted" style="font-size:0.95rem;">Update the bill details.</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-success btn-sm" href="/subcontracts/bills/{{ bill.id }}/print" target="_blank">Print</a>
+    <a class="btn btn-outline-secondary btn-sm" href="/subcontracts/bills?run=1&company_id={{ bill.company_id }}">Back</a>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="post" action="/subcontracts/bills/{{ bill.id }}/edit">
+      <div class="row g-2">
+        <div class="col-12 col-md-4">
+          <label class="form-label" style="font-size:0.9rem;">Company</label>
+          <input class="form-control form-control-sm" value="{{ company.name if company else '' }}" disabled>
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label" style="font-size:0.9rem;">Supplier</label>
+          <select name="subcontractor_id" class="form-select form-select-sm" required>
+            {% for s in subcontractors %}
+              <option value="{{ s.id }}" {% if bill.subcontractor_id == s.id %}selected{% endif %}>{{ s.contractor_company_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label" style="font-size:0.9rem;">Bill Date</label>
+          <input name="bill_date" type="date" class="form-control form-control-sm" value="{{ bill.bill_date }}" required>
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label" style="font-size:0.9rem;">Period From</label>
+          <input name="period_start" type="date" class="form-control form-control-sm" value="{{ bill.period_start }}">
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label" style="font-size:0.9rem;">Period To</label>
+          <input name="period_end" type="date" class="form-control form-control-sm" value="{{ bill.period_end }}">
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label" style="font-size:0.9rem;">Due Date</label>
+          <input name="due_date" type="date" class="form-control form-control-sm" value="{{ bill.due_date }}">
+        </div>
+        <div class="col-12 col-md-8">
+          <label class="form-label" style="font-size:0.9rem;">Description</label>
+          <input name="description" class="form-control form-control-sm" value="{{ bill.description or '' }}">
+        </div>
+        <div class="col-12 col-md-4">
+          <div class="form-check" style="margin-top:1.9rem;">
+            <input class="form-check-input" type="checkbox" id="use-hours" name="use_hours" {% if bill.use_hours %}checked{% endif %}>
+            <label class="form-check-label" for="use-hours" style="font-size:0.9rem;">Billing hrs</label>
+          </div>
+        </div>
+        <div class="col-12 col-md-4" id="hours-field" style="display:none;">
+          <label class="form-label" style="font-size:0.9rem;">Hours</label>
+          <input name="hours" type="number" step="0.01" class="form-control form-control-sm" value="{{ bill.hours or '' }}" placeholder="0.00">
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label" style="font-size:0.9rem;">Amount</label>
+          <input name="amount" id="amount-field" class="form-control form-control-sm" value="{{ bill.amount or '' }}" placeholder="0.00" required>
+        </div>
+        <div class="col-12 col-md-4">
+          <div class="form-check" style="margin-top:1.9rem;">
+            <input class="form-check-input" type="checkbox" id="taxable" name="taxable" {% if bill.taxable %}checked{% endif %}>
+            <label class="form-check-label" for="taxable" style="font-size:0.9rem;">Taxable</label>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="d-flex flex-wrap gap-2 justify-content-end" style="margin-top:0.25rem;">
+            <a class="btn btn-sm" style="border:1px solid #16a34a; color:#16a34a; background:#fff;" href="/subcontracts/bills?run=1&company_id={{ bill.company_id }}">Close</a>
+            <button class="btn btn-sm" style="background:#16a34a; color:#fff; border:1px solid #16a34a;" type="submit">Save Changes</button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const useHours = document.getElementById('use-hours');
+  const hoursField = document.getElementById('hours-field');
+  const amountField = document.getElementById('amount-field');
+
+  if (useHours && hoursField && amountField) {
+    const toggleHours = () => {
+      const showHours = useHours.checked;
+      hoursField.style.display = showHours ? 'block' : 'none';
+      amountField.disabled = showHours;
+      amountField.required = !showHours;
+    };
+    useHours.addEventListener('change', toggleHours);
+    toggleHours();
+  }
+</script>
+{% endblock %}
