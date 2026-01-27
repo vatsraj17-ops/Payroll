@@ -25,9 +25,9 @@
         </div>
         <div class="col-12 col-md-4">
           <label class="form-label" style="font-size:0.9rem;">Supplier</label>
-          <select name="subcontractor_id" class="form-select form-select-sm" required>
+          <select name="subcontractor_id" id="subcontractor-id" class="form-select form-select-sm" required>
             {% for s in subcontractors %}
-              <option value="{{ s.id }}" {% if bill.subcontractor_id == s.id %}selected{% endif %}>{{ s.contractor_company_name }}</option>
+              <option value="{{ s.id }}" data-rate="{{ s.contract_rate or 0 }}" {% if bill.subcontractor_id == s.id %}selected{% endif %}>{{ s.contractor_company_name }}</option>
             {% endfor %}
           </select>
         </div>
@@ -58,8 +58,22 @@
           </div>
         </div>
         <div class="col-12 col-md-4" id="hours-field" style="display:none;">
-          <label class="form-label" style="font-size:0.9rem;">Hours</label>
-          <input name="hours" type="number" step="0.01" class="form-control form-control-sm" value="{{ bill.hours or '' }}" placeholder="0.00">
+          <label class="form-label" style="font-size:0.9rem;">Total Hours</label>
+          <input name="hours" id="hours-total" type="number" step="0.01" class="form-control form-control-sm" value="{{ bill.hours or '' }}" placeholder="0.00" readonly>
+        </div>
+        <div class="col-12" id="hours-by-date" style="display:none;">
+          <div class="mt-2" style="font-size:0.9rem; font-weight:600;">Hours by date</div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th style="width:180px;">Date</th>
+                  <th style="width:180px;">Hours</th>
+                </tr>
+              </thead>
+              <tbody id="hours-by-date-body"></tbody>
+            </table>
+          </div>
         </div>
         <div class="col-12 col-md-4">
           <label class="form-label" style="font-size:0.9rem;">Amount</label>
@@ -85,16 +99,103 @@
 <script>
   const useHours = document.getElementById('use-hours');
   const hoursField = document.getElementById('hours-field');
+  const hoursByDate = document.getElementById('hours-by-date');
+  const hoursByDateBody = document.getElementById('hours-by-date-body');
   const amountField = document.getElementById('amount-field');
+  const hoursTotal = document.getElementById('hours-total');
+  const supplierSelect = document.getElementById('subcontractor-id');
+  const periodStart = document.querySelector('input[name="period_start"]');
+  const periodEnd = document.querySelector('input[name="period_end"]');
 
-  if (useHours && hoursField && amountField) {
+  if (useHours && hoursField && amountField && hoursByDate && hoursByDateBody && hoursTotal) {
+    const parseDate = (value) => {
+      if (!value) return null;
+      const parts = value.split('-').map(Number);
+      if (parts.length !== 3) return null;
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    };
+
+    const formatDate = (date) => {
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const getRate = () => {
+      if (!supplierSelect) return 0;
+      const option = supplierSelect.options[supplierSelect.selectedIndex];
+      if (!option) return 0;
+      const rate = parseFloat(option.getAttribute('data-rate') || '0');
+      return Number.isFinite(rate) ? rate : 0;
+    };
+
+    const buildDateRows = () => {
+      if (!hoursByDateBody) return;
+      hoursByDateBody.innerHTML = '';
+      const start = parseDate(periodStart?.value || '');
+      const end = parseDate(periodEnd?.value || '');
+      if (!start || !end || start > end) {
+        return;
+      }
+      let current = new Date(start.getTime());
+      while (current <= end) {
+        const dateValue = formatDate(current);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${dateValue}</td>
+          <td>
+            <input name="hours_day_${dateValue}" type="number" step="0.01" min="0" class="form-control form-control-sm hours-day" placeholder="0.00">
+          </td>
+        `;
+        hoursByDateBody.appendChild(row);
+        current.setDate(current.getDate() + 1);
+      }
+    };
+
+    const updateTotals = () => {
+      const inputs = hoursByDateBody ? hoursByDateBody.querySelectorAll('.hours-day') : [];
+      let totalHours = 0;
+      inputs.forEach((input) => {
+        const val = parseFloat(input.value || '0');
+        if (Number.isFinite(val)) totalHours += val;
+      });
+      hoursTotal.value = totalHours ? totalHours.toFixed(2) : '';
+      const amount = totalHours * getRate();
+      amountField.value = amount ? amount.toFixed(2) : '';
+    };
+
     const toggleHours = () => {
       const showHours = useHours.checked;
       hoursField.style.display = showHours ? 'block' : 'none';
+      hoursByDate.style.display = showHours ? 'block' : 'none';
       amountField.disabled = showHours;
       amountField.required = !showHours;
+      if (showHours) {
+        buildDateRows();
+        updateTotals();
+      }
     };
+
     useHours.addEventListener('change', toggleHours);
+    periodStart?.addEventListener('change', () => {
+      if (useHours.checked) {
+        buildDateRows();
+        updateTotals();
+      }
+    });
+    periodEnd?.addEventListener('change', () => {
+      if (useHours.checked) {
+        buildDateRows();
+        updateTotals();
+      }
+    });
+    supplierSelect?.addEventListener('change', () => {
+      if (useHours.checked) {
+        updateTotals();
+      }
+    });
+    hoursByDateBody?.addEventListener('input', updateTotals);
     toggleHours();
   }
 </script>

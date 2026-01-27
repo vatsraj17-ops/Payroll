@@ -1187,14 +1187,28 @@ def subcontract_bills():
         amount = 0.0
         hours = 0.0
         if use_hours:
-            try:
-                hours = float(hours_raw)
-            except Exception:
-                flash('Hours must be a number.', 'danger')
-                return redirect(url_for('subcontract_bills', company_id=company_id, subcontractor_id=sub_id_raw))
+            hours_from_days = 0.0
+            for key, value in request.form.items():
+                if not key.startswith('hours_day_'):
+                    continue
+                try:
+                    hours_from_days += float(value or 0)
+                except Exception:
+                    hours_from_days += 0.0
+
+            if hours_from_days > 0:
+                hours = hours_from_days
+            else:
+                try:
+                    hours = float(hours_raw)
+                except Exception:
+                    flash('Hours must be a number.', 'danger')
+                    return redirect(url_for('subcontract_bills', company_id=company_id, subcontractor_id=sub_id_raw))
+
             if hours <= 0:
                 flash('Hours must be greater than 0.', 'danger')
                 return redirect(url_for('subcontract_bills', company_id=company_id, subcontractor_id=sub_id_raw))
+
             rate = float(subcontractor.contract_rate or 0.0)
             if rate <= 0:
                 flash('Supplier hourly rate is missing. Update the supplier first.', 'danger')
@@ -1395,14 +1409,28 @@ def edit_subcontract_bill(bill_id: int):
         amount = 0.0
         hours = 0.0
         if use_hours:
-            try:
-                hours = float(hours_raw)
-            except Exception:
-                flash('Hours must be a number.', 'danger')
-                return redirect(url_for('edit_subcontract_bill', bill_id=bill.id))
+            hours_from_days = 0.0
+            for key, value in request.form.items():
+                if not key.startswith('hours_day_'):
+                    continue
+                try:
+                    hours_from_days += float(value or 0)
+                except Exception:
+                    hours_from_days += 0.0
+
+            if hours_from_days > 0:
+                hours = hours_from_days
+            else:
+                try:
+                    hours = float(hours_raw)
+                except Exception:
+                    flash('Hours must be a number.', 'danger')
+                    return redirect(url_for('edit_subcontract_bill', bill_id=bill.id))
+
             if hours <= 0:
                 flash('Hours must be greater than 0.', 'danger')
                 return redirect(url_for('edit_subcontract_bill', bill_id=bill.id))
+
             rate = float(subcontractor.contract_rate or 0.0)
             if rate <= 0:
                 flash('Supplier hourly rate is missing. Update the supplier first.', 'danger')
