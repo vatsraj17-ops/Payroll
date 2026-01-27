@@ -1579,25 +1579,25 @@ def subcontract_reports_pdf():
         except Exception:
             return "$0.00"
 
-    for idx, bill in enumerate(bills):
-        supplier = bill.subcontractor.contractor_company_name if bill.subcontractor else ''
-        company_name = bill.company.name if bill.company else ''
-        bill_date = bill.bill_date.strftime('%Y-%m-%d') if bill.bill_date else ''
-        amount = float(bill.amount or 0.0)
-        gst_amount = float(bill.gst_amount or 0.0)
-        total = float(bill.total or 0.0)
+    if not bills:
+        story.append(Paragraph('No subcontract bills match the selected filters.', styles['BodyText']))
+    else:
+        first_bill = bills[0]
+        company_name = first_bill.company.name if first_bill.company else ''
+        supplier = first_bill.subcontractor.contractor_company_name if first_bill.subcontractor else ''
 
-        story.append(Paragraph('Bill', styles['Heading2']))
+        story.append(Paragraph('Reports', styles['Heading2']))
         story.append(Spacer(1, 6))
 
         header_tbl = Table(
             [
                 [
-                    Paragraph(f"<b>Supplier</b><br/>{supplier}<br/><font size=9>{company_name}</font>", styles['BodyText']),
-                    Paragraph(f"<b>Bill Date</b><br/>{bill_date}", styles['BodyText']),
+                    Paragraph(f"<b>Company</b><br/>{company_name}", styles['BodyText']),
+                    Paragraph(f"<b>Supplier</b><br/>{supplier}", styles['BodyText']),
+                    Paragraph(f"<b>Period</b><br/>{date_from} - {date_to}", styles['BodyText']),
                 ]
             ],
-            colWidths=[doc.width * 0.65, doc.width * 0.35],
+            colWidths=[doc.width * 0.34, doc.width * 0.33, doc.width * 0.33],
         )
         header_tbl.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
@@ -1607,20 +1607,28 @@ def subcontract_reports_pdf():
         story.append(header_tbl)
         story.append(Spacer(1, 10))
 
-        line_rows = [
-            ['SERVICE', 'DESCRIPTION', 'TAX', 'QTY', 'RATE', 'AMOUNT'],
-            [
-                'Subcontract',
-                bill.description or '',
-                'GST/HST',
-                '1',
+        line_rows = [['DATE', 'DESCRIPTION', 'SUBTOTAL', 'GST/HST', 'TOTAL']]
+        total_amount = 0.0
+        total_gst = 0.0
+        total_all = 0.0
+        for b in bills:
+            amount = float(b.amount or 0.0)
+            gst_amount = float(b.gst_amount or 0.0)
+            total = float(b.total or 0.0)
+            total_amount += amount
+            total_gst += gst_amount
+            total_all += total
+            line_rows.append([
+                b.bill_date.strftime('%Y-%m-%d') if b.bill_date else '',
+                b.description or 'Subcontract',
                 _money(amount),
-                _money(amount),
-            ],
-        ]
+                _money(gst_amount),
+                _money(total),
+            ])
+
         line_tbl = Table(
             line_rows,
-            colWidths=[1.4 * inch, 2.6 * inch, 0.8 * inch, 0.6 * inch, 1.0 * inch, 1.0 * inch],
+            colWidths=[1.0 * inch, 3.2 * inch, 1.1 * inch, 1.1 * inch, 1.1 * inch],
         )
         line_tbl.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e9eff6')),
@@ -1630,7 +1638,7 @@ def subcontract_reports_pdf():
             ('LINEBELOW', (0, 0), (-1, 0), 0.5, colors.HexColor('#cbd5e1')),
             ('LINEBELOW', (0, 1), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
             ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),
-            ('ALIGN', (2, 0), (-1, 0), 'CENTER'),
+            ('ALIGN', (2, 0), (-1, 0), 'RIGHT'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]))
         story.append(line_tbl)
@@ -1638,10 +1646,9 @@ def subcontract_reports_pdf():
 
         totals_tbl = Table(
             [
-                ['Subtotal', _money(amount)],
-                ['Sales Tax Total', _money(gst_amount)],
-                ['Total', _money(total)],
-                ['Balance Due', _money(total)],
+                ['Subtotal', _money(total_amount)],
+                ['Sales Tax Total', _money(total_gst)],
+                ['Total', _money(total_all)],
             ],
             colWidths=[doc.width * 0.75, doc.width * 0.25],
         )
@@ -1649,15 +1656,9 @@ def subcontract_reports_pdf():
             ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 0), (-1, -1), 9),
             ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
-            ('LINEABOVE', (0, 3), (-1, 3), 0.5, colors.HexColor('#cbd5e1')),
+            ('LINEABOVE', (0, 2), (-1, 2), 0.5, colors.HexColor('#cbd5e1')),
         ]))
         story.append(totals_tbl)
-
-        if idx < len(bills) - 1:
-            story.append(PageBreak())
-
-    if not bills:
-        story.append(Paragraph('No subcontract bills match the selected filters.', styles['BodyText']))
 
     doc.build(story)
     buffer.seek(0)
