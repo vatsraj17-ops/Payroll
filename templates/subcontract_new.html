@@ -61,7 +61,9 @@
   </div>
 </form>
 
-{% if subcontractors and subcontractors|length > 0 %}
+{% if require_company_filter %}
+  <p class="text-muted">Select a company to view suppliers.</p>
+{% elif subcontractors and subcontractors|length > 0 %}
   <table class="table table-sm align-middle">
     <thead>
       <tr>

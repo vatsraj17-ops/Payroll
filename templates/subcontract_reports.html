@@ -49,6 +49,8 @@
 
 {% if run != '1' %}
   <p class="text-muted">Select filters to load subcontract reports.</p>
+{% elif require_company_filter %}
+  <p class="text-muted">Select a company to view reports.</p>
 {% elif bills and bills|length > 0 %}
   {% set first_bill = bills[0] %}
   <div class="card mb-4" style="border:1px solid #e5e7eb;">

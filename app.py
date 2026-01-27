@@ -977,11 +977,15 @@ def manage_subcontracts():
         company_id = str(session.get('company_id') or '').strip()
 
     subs = []
+    require_company_filter = False
     if run == '1':
-        q = Subcontractor.query
-        if company_id:
-            q = q.filter(Subcontractor.company_id == int(company_id))
-        subs = q.order_by(Subcontractor.contractor_company_name.asc(), Subcontractor.id.asc()).all()
+        if _is_admin_session() and not company_id:
+            require_company_filter = True
+        else:
+            q = Subcontractor.query
+            if company_id:
+                q = q.filter(Subcontractor.company_id == int(company_id))
+            subs = q.order_by(Subcontractor.contractor_company_name.asc(), Subcontractor.id.asc()).all()
 
     return render_template(
         'manage_subcontracts.html',
@@ -989,6 +993,7 @@ def manage_subcontracts():
         subcontractors=subs,
         selected_company_id=company_id,
         run=run,
+        require_company_filter=require_company_filter,
     )
 
 
@@ -1065,22 +1070,28 @@ def new_subcontractor():
         flash('Supplier added.', 'success')
         return redirect(url_for('new_subcontractor', company_id=company_id))
 
-    subs_query = Subcontractor.query
-    if selected_company_id:
-        try:
-            subs_query = subs_query.filter(Subcontractor.company_id == int(selected_company_id))
-        except Exception:
-            subs_query = subs_query
-    elif _is_owner_session():
-        subs_query = subs_query.filter(Subcontractor.company_id == int(session.get('company_id') or 0))
+    require_company_filter = False
+    if _is_admin_session() and not selected_company_id:
+        subcontractors = []
+        require_company_filter = True
+    else:
+        subs_query = Subcontractor.query
+        if selected_company_id:
+            try:
+                subs_query = subs_query.filter(Subcontractor.company_id == int(selected_company_id))
+            except Exception:
+                subs_query = subs_query
+        elif _is_owner_session():
+            subs_query = subs_query.filter(Subcontractor.company_id == int(session.get('company_id') or 0))
 
-    subcontractors = subs_query.order_by(Subcontractor.contractor_company_name.asc(), Subcontractor.id.asc()).all()
+        subcontractors = subs_query.order_by(Subcontractor.contractor_company_name.asc(), Subcontractor.id.asc()).all()
 
     return render_template(
         'subcontract_new.html',
         companies=companies,
         subcontractors=subcontractors,
         selected_company_id=selected_company_id,
+        require_company_filter=require_company_filter,
     )
 
 
@@ -1581,24 +1592,28 @@ def subcontract_reports():
 
     bills = []
     totals = {'amount': 0.0, 'gst': 0.0, 'total': 0.0}
+    require_company_filter = False
     if (run == '1' or request.method == 'POST') and schema_ready:
-        q = SubcontractBill.query
-        if company_id_int is not None:
-            q = q.filter(SubcontractBill.company_id == company_id_int)
-        if subcontractor_id:
-            try:
-                q = q.filter(SubcontractBill.subcontractor_id == int(subcontractor_id))
-            except Exception:
-                q = q
-        if date_from:
-            q = q.filter(SubcontractBill.bill_date >= date_from)
-        if date_to:
-            q = q.filter(SubcontractBill.bill_date <= date_to)
-        bills = q.order_by(SubcontractBill.bill_date.desc(), SubcontractBill.id.desc()).all()
-        for b in bills:
-            totals['amount'] += float(b.amount or 0.0)
-            totals['gst'] += float(b.gst_amount or 0.0)
-            totals['total'] += float(b.total or 0.0)
+        if _is_admin_session() and company_id_int is None:
+            require_company_filter = True
+        else:
+            q = SubcontractBill.query
+            if company_id_int is not None:
+                q = q.filter(SubcontractBill.company_id == company_id_int)
+            if subcontractor_id:
+                try:
+                    q = q.filter(SubcontractBill.subcontractor_id == int(subcontractor_id))
+                except Exception:
+                    q = q
+            if date_from:
+                q = q.filter(SubcontractBill.bill_date >= date_from)
+            if date_to:
+                q = q.filter(SubcontractBill.bill_date <= date_to)
+            bills = q.order_by(SubcontractBill.bill_date.desc(), SubcontractBill.id.desc()).all()
+            for b in bills:
+                totals['amount'] += float(b.amount or 0.0)
+                totals['gst'] += float(b.gst_amount or 0.0)
+                totals['total'] += float(b.total or 0.0)
 
     return render_template(
         'subcontract_reports.html',
@@ -1612,6 +1627,7 @@ def subcontract_reports():
         selected_date_to=date_to,
         run=run,
         schema_ready=schema_ready,
+        require_company_filter=require_company_filter,
     )
 
 
@@ -1645,6 +1661,9 @@ def subcontract_reports_pdf():
             company_id_int = None
         if company_id_int is not None and company_id_int not in allowed_company_ids:
             abort(403)
+
+    if _is_admin_session() and company_id_int is None:
+        abort(400)
 
     q = SubcontractBill.query
     if company_id_int is not None:
