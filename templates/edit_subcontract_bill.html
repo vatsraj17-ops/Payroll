@@ -97,6 +97,7 @@
 </div>
 
 <script>
+  const existingHoursByDate = {{ hours_by_date_data | tojson }};
   const useHours = document.getElementById('use-hours');
   const hoursField = document.getElementById('hours-field');
   const hoursByDate = document.getElementById('hours-by-date');
@@ -141,11 +142,12 @@
       let current = new Date(start.getTime());
       while (current <= end) {
         const dateValue = formatDate(current);
+        const existingValue = existingHoursByDate && existingHoursByDate[dateValue] ? existingHoursByDate[dateValue] : '';
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${dateValue}</td>
           <td>
-            <input name="hours_day_${dateValue}" type="number" step="0.01" min="0" class="form-control form-control-sm hours-day" placeholder="0.00">
+            <input name="hours_day_${dateValue}" type="number" step="0.01" min="0" class="form-control form-control-sm hours-day" placeholder="0.00" value="${existingValue}">
           </td>
         `;
         hoursByDateBody.appendChild(row);

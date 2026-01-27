@@ -3,6 +3,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
 import os
 import datetime
+import json
 from flask_sqlalchemy import SQLAlchemy
 from models import db, Company, Employee, PayrollLine, User, PayrollSubmission, Subcontractor, SubcontractBill
 from calc import calculate_payroll
@@ -124,6 +125,7 @@ def _ensure_subcontract_bill_columns() -> None:
             'ALTER TABLE subcontract_bill ADD COLUMN IF NOT EXISTS use_hours BOOLEAN DEFAULT 0',
             'ALTER TABLE subcontract_bill ADD COLUMN IF NOT EXISTS hours FLOAT DEFAULT 0',
             'ALTER TABLE subcontract_bill ADD COLUMN IF NOT EXISTS taxable BOOLEAN DEFAULT 1',
+            'ALTER TABLE subcontract_bill ADD COLUMN IF NOT EXISTS hours_by_date TEXT',
         ]
 
         with db.engine.begin() as conn:
@@ -145,7 +147,7 @@ def _is_subcontract_bill_schema_ready() -> bool:
         if 'subcontract_bill' not in inspector.get_table_names():
             return False
         existing = {c['name'] for c in inspector.get_columns('subcontract_bill')}
-        required = {'period_start', 'period_end', 'due_date', 'use_hours', 'hours', 'taxable'}
+        required = {'period_start', 'period_end', 'due_date', 'use_hours', 'hours', 'taxable', 'hours_by_date'}
         return required.issubset(existing)
     except Exception:
         return False
@@ -1186,18 +1188,25 @@ def subcontract_bills():
 
         amount = 0.0
         hours = 0.0
+        hours_by_date = None
         if use_hours:
             hours_from_days = 0.0
+            hours_by_date_map: dict[str, float] = {}
             for key, value in request.form.items():
                 if not key.startswith('hours_day_'):
                     continue
+                date_key = key.replace('hours_day_', '').strip()
                 try:
-                    hours_from_days += float(value or 0)
+                    hours_val = float(value or 0)
                 except Exception:
-                    hours_from_days += 0.0
+                    hours_val = 0.0
+                if hours_val > 0:
+                    hours_by_date_map[date_key] = hours_val
+                    hours_from_days += hours_val
 
             if hours_from_days > 0:
                 hours = hours_from_days
+                hours_by_date = json.dumps(hours_by_date_map)
             else:
                 try:
                     hours = float(hours_raw)
@@ -1237,6 +1246,7 @@ def subcontract_bills():
             due_date=due_date,
             use_hours=use_hours,
             hours=hours,
+            hours_by_date=hours_by_date,
             taxable=taxable,
             description=description or None,
             amount=amount,
@@ -1323,9 +1333,27 @@ def subcontract_bill_print(bill_id: int):
 
     qty = 1.0
     rate = float(bill.amount or 0.0)
+    hours_by_date_rows: list[dict[str, float | str]] = []
     if bool(bill.use_hours) and float(bill.hours or 0.0) > 0:
         qty = float(bill.hours or 0.0)
-        rate = float(bill.amount or 0.0) / qty
+        rate = float(bill.amount or 0.0) / qty if qty else 0.0
+        if bill.hours_by_date:
+            try:
+                hours_by_date_map = json.loads(bill.hours_by_date)
+            except Exception:
+                hours_by_date_map = {}
+            for date_key in sorted(hours_by_date_map.keys()):
+                try:
+                    day_hours = float(hours_by_date_map[date_key])
+                except Exception:
+                    day_hours = 0.0
+                if day_hours <= 0:
+                    continue
+                hours_by_date_rows.append({
+                    'date': date_key,
+                    'hours': day_hours,
+                    'amount': day_hours * rate,
+                })
 
     tax_label = 'GST/HST' if bool(bill.taxable) else 'Exempt'
 
@@ -1335,6 +1363,7 @@ def subcontract_bill_print(bill_id: int):
         qty=qty,
         rate=rate,
         tax_label=tax_label,
+        hours_by_date_rows=hours_by_date_rows,
     )
 
 
@@ -1408,18 +1437,25 @@ def edit_subcontract_bill(bill_id: int):
 
         amount = 0.0
         hours = 0.0
+        hours_by_date = None
         if use_hours:
             hours_from_days = 0.0
+            hours_by_date_map: dict[str, float] = {}
             for key, value in request.form.items():
                 if not key.startswith('hours_day_'):
                     continue
+                date_key = key.replace('hours_day_', '').strip()
                 try:
-                    hours_from_days += float(value or 0)
+                    hours_val = float(value or 0)
                 except Exception:
-                    hours_from_days += 0.0
+                    hours_val = 0.0
+                if hours_val > 0:
+                    hours_by_date_map[date_key] = hours_val
+                    hours_from_days += hours_val
 
             if hours_from_days > 0:
                 hours = hours_from_days
+                hours_by_date = json.dumps(hours_by_date_map)
             else:
                 try:
                     hours = float(hours_raw)
@@ -1457,6 +1493,7 @@ def edit_subcontract_bill(bill_id: int):
         bill.due_date = due_date
         bill.use_hours = use_hours
         bill.hours = hours
+        bill.hours_by_date = hours_by_date
         bill.taxable = taxable
         bill.description = description or None
         bill.amount = amount
@@ -1468,11 +1505,19 @@ def edit_subcontract_bill(bill_id: int):
         flash('Bill updated.', 'success')
         return redirect(url_for('subcontract_bills', run='1', company_id=company_id_int, subcontractor_id=sub_id, bill_id=bill.id))
 
+    hours_by_date_data = {}
+    if bill.hours_by_date:
+        try:
+            hours_by_date_data = json.loads(bill.hours_by_date) or {}
+        except Exception:
+            hours_by_date_data = {}
+
     return render_template(
         'edit_subcontract_bill.html',
         bill=bill,
         company=company,
         subcontractors=subcontractors,
+        hours_by_date_data=hours_by_date_data,
     )
 
 

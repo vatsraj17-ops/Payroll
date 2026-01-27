@@ -122,6 +122,7 @@ class SubcontractBill(db.Model):
     due_date = db.Column(db.Date, nullable=True)
     use_hours = db.Column(db.Boolean, default=False)
     hours = db.Column(db.Float, default=0.0)
+    hours_by_date = db.Column(db.Text, nullable=True)
     taxable = db.Column(db.Boolean, default=True)
     description = db.Column(db.String(256), nullable=True)
     amount = db.Column(db.Float, default=0.0)

@@ -210,7 +210,7 @@
       <table>
         <thead>
           <tr>
-            <th style="width:22%">SERVICE</th>
+            <th style="width:22%">{% if hours_by_date_rows and hours_by_date_rows|length > 0 %}DATE{% else %}SERVICE{% endif %}</th>
             <th>DESCRIPTION</th>
             <th style="width:10%">TAX</th>
             <th style="width:10%" class="num">QTY</th>
@@ -219,14 +219,27 @@
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>Subcontract</td>
-            <td>{{ bill.description or '' }}</td>
-            <td>{{ tax_label }}</td>
-            <td class="num">{{ '%.2f'|format(qty) }}</td>
-            <td class="num">{{ rate | money }}</td>
-            <td class="num">{{ bill.amount | money }}</td>
-          </tr>
+          {% if hours_by_date_rows and hours_by_date_rows|length > 0 %}
+            {% for row in hours_by_date_rows %}
+              <tr>
+                <td>{{ row.date }}</td>
+                <td>{{ bill.description or '' }}</td>
+                <td>{{ tax_label }}</td>
+                <td class="num">{{ '%.2f'|format(row.hours) }}</td>
+                <td class="num">{{ rate | money }}</td>
+                <td class="num">{{ row.amount | money }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td>Subcontract</td>
+              <td>{{ bill.description or '' }}</td>
+              <td>{{ tax_label }}</td>
+              <td class="num">{{ '%.2f'|format(qty) }}</td>
+              <td class="num">{{ rate | money }}</td>
+              <td class="num">{{ bill.amount | money }}</td>
+            </tr>
+          {% endif %}
         </tbody>
       </table>
 
