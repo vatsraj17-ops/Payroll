@@ -1233,7 +1233,14 @@ def subcontract_bills():
         db.session.add(bill)
         db.session.commit()
         flash('Bill saved.', 'success')
-        return redirect(url_for('subcontract_bills', run='1', company_id=company_id, subcontractor_id=sub_id_raw))
+        return redirect(url_for(
+            'subcontract_bills',
+            run='1',
+            company_id=company_id,
+            subcontractor_id=sub_id_raw,
+            bill_id=bill.id,
+            saved='1',
+        ))
 
     bills = []
     totals = {'amount': 0.0, 'gst': 0.0, 'total': 0.0}
@@ -1256,6 +1263,21 @@ def subcontract_bills():
             totals['gst'] += float(b.gst_amount or 0.0)
             totals['total'] += float(b.total or 0.0)
 
+    saved_bill = None
+    saved_id_raw = (request.args.get('bill_id') or '').strip()
+    if saved_id_raw.isdigit():
+        try:
+            candidate = db.session.get(SubcontractBill, int(saved_id_raw))
+        except Exception:
+            candidate = None
+        if candidate:
+            if _is_admin_session():
+                saved_bill = candidate
+            else:
+                cid = session.get('company_id')
+                if cid and int(cid) == int(candidate.company_id or 0):
+                    saved_bill = candidate
+
     return render_template(
         'subcontract_bills.html',
         companies=companies,
@@ -1268,6 +1290,37 @@ def subcontract_bills():
         selected_date_to=date_to,
         run=run,
         schema_ready=schema_ready,
+        saved_bill=saved_bill,
+    )
+
+
+@app.route('/subcontracts/bills/<int:bill_id>/print', methods=['GET'])
+@require_login
+def subcontract_bill_print(bill_id: int):
+    _ensure_subcontract_bill_columns()
+    bill = db.session.get(SubcontractBill, bill_id)
+    if not bill:
+        abort(404)
+
+    if not _is_admin_session():
+        cid = session.get('company_id')
+        if not cid or int(cid) != int(bill.company_id or 0):
+            abort(403)
+
+    qty = 1.0
+    rate = float(bill.amount or 0.0)
+    if bool(bill.use_hours) and float(bill.hours or 0.0) > 0:
+        qty = float(bill.hours or 0.0)
+        rate = float(bill.amount or 0.0) / qty
+
+    tax_label = 'GST/HST' if bool(bill.taxable) else 'Exempt'
+
+    return render_template(
+        'subcontract_bill_print.html',
+        bill=bill,
+        qty=qty,
+        rate=rate,
+        tax_label=tax_label,
     )
 
 

@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bill</title>
+    <style>
+      :root {
+        --accent: #2b5a85;
+        --line: #d8dee6;
+        --soft: #eef3f8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        margin: 0;
+        color: #1f2937;
+        background: #fff;
+      }
+      .page {
+        max-width: 980px;
+        margin: 32px auto 48px;
+        padding: 0 24px;
+      }
+      .print-controls {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 24px;
+      }
+      .btn {
+        border: 1px solid #16a34a;
+        color: #16a34a;
+        padding: 8px 20px;
+        border-radius: 6px;
+        background: #fff;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 18px;
+      }
+      .company {
+        font-size: 14px;
+        line-height: 1.4;
+      }
+      .company-name {
+        font-weight: 600;
+        font-size: 16px;
+        margin-bottom: 6px;
+      }
+      .bill-meta {
+        text-align: right;
+        font-size: 13px;
+      }
+      .bill-meta .row {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+      }
+      .bill-meta .label {
+        color: #6b7280;
+        width: 80px;
+        text-align: right;
+      }
+      .title {
+        color: #3b82f6;
+        font-size: 20px;
+        font-weight: 600;
+        margin: 12px 0 8px;
+      }
+      .supplier-block {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+      .supplier-block .label {
+        font-size: 12px;
+        color: #6b7280;
+      }
+      .divider {
+        border-top: 2px solid var(--line);
+        margin: 16px 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      thead th {
+        text-align: left;
+        background: var(--soft);
+        color: var(--accent);
+        font-weight: 600;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line);
+      }
+      tbody td {
+        padding: 10px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      tbody td.num {
+        text-align: right;
+        white-space: nowrap;
+      }
+      .totals {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 14px;
+      }
+      .totals table {
+        width: 320px;
+        border-collapse: separate;
+        border-spacing: 0 6px;
+      }
+      .totals td {
+        padding: 2px 0;
+      }
+      .totals td.label {
+        color: #6b7280;
+        text-align: left;
+      }
+      .totals td.value {
+        text-align: right;
+        font-weight: 600;
+      }
+      .balance {
+        border-top: 1px dashed var(--line);
+        padding-top: 8px;
+        margin-top: 6px;
+      }
+      @media print {
+        .print-controls {
+          display: none;
+        }
+        .page {
+          margin: 0;
+          padding: 0 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="print-controls">
+        <button class="btn" onclick="window.print()">Print</button>
+      </div>
+
+      <div class="header">
+        <div class="company">
+          <div class="company-name">{{ bill.company.name if bill.company else '' }}</div>
+          {% if bill.company and bill.company.business_number %}
+            <div>{{ bill.company.business_number }}</div>
+          {% endif %}
+        </div>
+        <div class="bill-meta">
+          <div class="row"><div class="label">Bill Date</div><div>{{ bill.bill_date.strftime('%d/%m/%Y') if bill.bill_date else '' }}</div></div>
+          <div class="row"><div class="label">Due Date</div><div>{{ bill.due_date.strftime('%d/%m/%Y') if bill.due_date else '' }}</div></div>
+        </div>
+      </div>
+
+      <div class="title">Bill</div>
+
+      <div class="supplier-block">
+        <div>
+          <div class="label">Supplier</div>
+          <div style="font-weight:600; margin-top:4px;">{{ bill.subcontractor.contractor_company_name if bill.subcontractor else '' }}</div>
+          {% if bill.subcontractor and bill.subcontractor.address %}
+            <div style="font-size:12px; color:#6b7280; margin-top:4px;">{{ bill.subcontractor.address }}</div>
+          {% endif %}
+          {% if bill.subcontractor and bill.subcontractor.tax_number %}
+            <div style="font-size:12px; color:#6b7280;">{{ bill.subcontractor.tax_number }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width:22%">SERVICE</th>
+            <th>DESCRIPTION</th>
+            <th style="width:10%">TAX</th>
+            <th style="width:10%" class="num">QTY</th>
+            <th style="width:12%" class="num">RATE</th>
+            <th style="width:12%" class="num">AMOUNT</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Subcontract</td>
+            <td>{{ bill.description or '' }}</td>
+            <td>{{ tax_label }}</td>
+            <td class="num">{{ '%.2f'|format(qty) }}</td>
+            <td class="num">{{ rate | money }}</td>
+            <td class="num">{{ bill.amount | money }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="totals">
+        <table>
+          <tr>
+            <td class="label">SUBTOTAL</td>
+            <td class="value">{{ bill.amount | money }}</td>
+          </tr>
+          <tr>
+            <td class="label">SALES TAX TOTAL</td>
+            <td class="value">{{ bill.gst_amount | money }}</td>
+          </tr>
+          <tr>
+            <td class="label">TOTAL</td>
+            <td class="value">{{ bill.total | money }}</td>
+          </tr>
+          <tr>
+            <td class="label">PAYMENT PAID</td>
+            <td class="value">{{ 0 | money }}</td>
+          </tr>
+          <tr class="balance">
+            <td class="label">BALANCE DUE</td>
+            <td class="value">{{ bill.total | money }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </body>
+</html>

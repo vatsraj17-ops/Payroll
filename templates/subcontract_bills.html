@@ -9,6 +9,12 @@
     Bills schema is updating. Please run the admin migration and refresh this page.
   </div>
 {% endif %}
+{% if saved_bill %}
+  <div class="alert alert-success d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <span>Bill saved.</span>
+    <a class="btn" style="border:1px solid #16a34a; color:#16a34a; background:#fff;" href="/subcontracts/bills/{{ saved_bill.id }}/print" target="_blank">Print</a>
+  </div>
+{% endif %}
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
   <div>
     <h2 class="mb-1">Expenses</h2>
@@ -92,8 +98,11 @@
             <label class="form-check-label" for="taxable" style="font-size:0.9rem;">Taxable</label>
           </div>
         </div>
-        <div class="col-12 col-md-4" style="display:flex; align-items:end;">
-          <button class="btn btn-primary btn-sm w-100" type="submit">Save Bill</button>
+        <div class="col-12">
+          <div class="d-flex flex-wrap gap-2 justify-content-end" style="margin-top:0.25rem;">
+            <a class="btn btn-sm" style="border:1px solid #16a34a; color:#16a34a; background:#fff;" href="/expenses">Close</a>
+            <button class="btn btn-sm" style="background:#16a34a; color:#fff; border:1px solid #16a34a;" type="submit">Save Bill</button>
+          </div>
         </div>
       </div>
     </form>
@@ -137,6 +146,7 @@
         <th class="text-end">Amount</th>
         <th class="text-end">GST/HST</th>
         <th class="text-end">Total</th>
+        <th style="width:90px;" class="text-end">Print</th>
       </tr>
     </thead>
     <tbody>
@@ -149,6 +159,9 @@
           <td class="text-end">{{ (b.amount or 0) | money }}</td>
           <td class="text-end">{{ (b.gst_amount or 0) | money }}</td>
           <td class="text-end">{{ (b.total or 0) | money }}</td>
+          <td class="text-end">
+            <a class="btn btn-outline-success btn-sm" href="/subcontracts/bills/{{ b.id }}/print" target="_blank">Print</a>
+          </td>
         </tr>
       {% endfor %}
     </tbody>

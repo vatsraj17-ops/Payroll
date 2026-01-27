@@ -45,6 +45,7 @@
           <th class="text-end">Total before sales tax</th>
           <th class="text-end">Sales tax</th>
           <th class="text-end">Total</th>
+          <th style="width:90px;" class="text-end">Print</th>
         </tr>
       </thead>
       <tbody>
@@ -59,6 +60,9 @@
             <td class="text-end">{{ (b.amount or 0) | money }}</td>
             <td class="text-end">{{ (b.gst_amount or 0) | money }}</td>
             <td class="text-end">{{ (b.total or 0) | money }}</td>
+            <td class="text-end">
+              <a class="btn btn-outline-success btn-sm" href="/subcontracts/bills/{{ b.id }}/print" target="_blank">Print</a>
+            </td>
           </tr>
         {% endfor %}
       </tbody>
