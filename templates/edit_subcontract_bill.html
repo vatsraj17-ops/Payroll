@@ -12,6 +12,9 @@
   <div class="d-flex gap-2">
     <a class="btn btn-outline-success btn-sm" href="/subcontracts/bills/{{ bill.id }}/print" target="_blank">Print</a>
     <a class="btn btn-outline-secondary btn-sm" href="/subcontracts/bills?run=1&company_id={{ bill.company_id }}">Back</a>
+    <form method="post" action="/subcontracts/bills/{{ bill.id }}/delete" onsubmit="return confirm('Delete this bill?');" style="display:inline;">
+      <button class="btn btn-outline-danger btn-sm" type="submit">Delete</button>
+    </form>
   </div>
 </div>
 

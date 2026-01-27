@@ -1521,6 +1521,26 @@ def edit_subcontract_bill(bill_id: int):
     )
 
 
+@app.route('/subcontracts/bills/<int:bill_id>/delete', methods=['POST'])
+@require_login
+def delete_subcontract_bill(bill_id: int):
+    _ensure_subcontract_bill_columns()
+    bill = db.session.get(SubcontractBill, bill_id)
+    if not bill:
+        abort(404)
+
+    if not _is_admin_session():
+        cid = session.get('company_id')
+        if not cid or int(cid) != int(bill.company_id or 0):
+            abort(403)
+
+    company_id = bill.company_id
+    db.session.delete(bill)
+    db.session.commit()
+    flash('Bill deleted.', 'success')
+    return redirect(url_for('subcontract_bills', run='1', company_id=company_id))
+
+
 @app.route('/subcontracts/reports', methods=['GET', 'POST'])
 @require_login
 def subcontract_reports():
