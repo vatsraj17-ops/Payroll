@@ -17,10 +17,10 @@
     </div>
     <div class="col-12 col-md-3">
       <label class="form-label" style="font-size:0.9rem;">Employee</label>
-      <select name="employee_id" class="form-select form-select-sm">
+      <select name="employee_id" id="employee_id" class="form-select form-select-sm">
         <option value="">-- Employee --</option>
         {% for e in employees %}
-          <option value="{{ e.id }}" {% if selected_employee_id and selected_employee_id|int == e.id %}selected{% endif %}>{{ e.first_name }} {{ e.last_name }}</option>
+          <option value="{{ e.id }}" data-company-id="{{ e.company_id or '' }}" {% if selected_employee_id and selected_employee_id|int == e.id %}selected{% endif %}>{{ e.first_name }} {{ e.last_name }}</option>
         {% endfor %}
       </select>
     </div>
@@ -40,6 +40,8 @@
 
 {% if not run %}
   <p class="text-muted">No payroll data shown. Use the filter and click <strong>Filter</strong> to load saved entries.</p>
+{% elif require_company_filter %}
+  <p class="text-muted">Select a company to view payroll data.</p>
 {% elif lines and lines|length > 0 %}
   <table class="table table-sm align-middle">
     <thead>
@@ -75,5 +77,31 @@
 {% else %}
   <p class="text-muted">No payroll lines match the filters.</p>
 {% endif %}
+
+<script>
+  const companySelect = document.querySelector('select[name="company_id"]');
+  const employeeSelect = document.getElementById('employee_id');
+
+  function filterEmployees() {
+    if (!companySelect || !employeeSelect) return;
+    const companyId = companySelect.value || '';
+    let hasSelection = false;
+    Array.from(employeeSelect.options).forEach((opt, index) => {
+      if (index === 0) return;
+      const optCompanyId = opt.getAttribute('data-company-id') || '';
+      const show = companyId && optCompanyId === companyId;
+      opt.hidden = !show;
+      if (show && opt.selected) {
+        hasSelection = true;
+      }
+    });
+    if (!hasSelection) {
+      employeeSelect.value = '';
+    }
+  }
+
+  companySelect && companySelect.addEventListener('change', filterEmployees);
+  filterEmployees();
+</script>
 
 {% endblock %}

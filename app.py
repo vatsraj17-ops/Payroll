@@ -2154,7 +2154,7 @@ def data_entry():
 @require_admin
 def manage_data():
     companies = Company.query.order_by(Company.name).all()
-    employees = Employee.query.order_by(Employee.first_name, Employee.last_name).all()
+    employees = []
 
     run = (request.args.get('run') or '').strip()
 
@@ -2163,18 +2163,34 @@ def manage_data():
     date_from = (request.args.get('date_from') or '').strip()
     date_to = (request.args.get('date_to') or '').strip()
 
+    require_company_filter = False
+    if company_id:
+        try:
+            employees = (
+                Employee.query
+                .filter(Employee.company_id == int(company_id))
+                .order_by(Employee.first_name, Employee.last_name)
+                .all()
+            )
+        except Exception:
+            employees = []
+    else:
+        require_company_filter = True
+
     lines = []
     if run == '1':
-        q = PayrollLine.query.join(Employee)
-        if company_id:
+        if not company_id:
+            require_company_filter = True
+        else:
+            q = PayrollLine.query.join(Employee)
             q = q.filter(Employee.company_id == int(company_id))
-        if employee_id:
-            q = q.filter(PayrollLine.employee_id == int(employee_id))
-        if date_from:
-            q = q.filter(PayrollLine.pay_date >= date_from)
-        if date_to:
-            q = q.filter(PayrollLine.pay_date <= date_to)
-        lines = q.order_by(PayrollLine.pay_date.desc(), PayrollLine.id.desc()).limit(200).all()
+            if employee_id:
+                q = q.filter(PayrollLine.employee_id == int(employee_id))
+            if date_from:
+                q = q.filter(PayrollLine.pay_date >= date_from)
+            if date_to:
+                q = q.filter(PayrollLine.pay_date <= date_to)
+            lines = q.order_by(PayrollLine.pay_date.desc(), PayrollLine.id.desc()).limit(200).all()
 
     # Used by Edit links to return to the filtered view.
     next_url = request.full_path or url_for('manage_data')
@@ -2191,6 +2207,7 @@ def manage_data():
         selected_date_to=date_to,
         next_url_encoded=next_url_encoded,
         run=run,
+        require_company_filter=require_company_filter,
     )
 
 
@@ -3238,7 +3255,7 @@ def delete_payroll_line(payroll_line_id):
 @require_admin
 def reports():
     companies = Company.query.all()
-    employees = Employee.query.all()
+    employees = []
     company_reports = None
     remittance = None
     employee_report = None
@@ -3246,6 +3263,17 @@ def reports():
     selected_employee_id = request.form.get('employee_id') if request.method == 'POST' else ''
     selected_date_from = request.form.get('date_from') if request.method == 'POST' else ''
     selected_date_to = request.form.get('date_to') if request.method == 'POST' else ''
+
+    if selected_company_id:
+        try:
+            employees = (
+                Employee.query
+                .filter(Employee.company_id == int(selected_company_id))
+                .order_by(Employee.first_name, Employee.last_name)
+                .all()
+            )
+        except Exception:
+            employees = []
 
     def _parse_date(s):
         if not s:
@@ -3263,6 +3291,20 @@ def reports():
 
         company = db.session.get(Company, int(company_id)) if company_id else None
         employee = db.session.get(Employee, int(employee_id)) if employee_id else None
+        if employee and company and int(employee.company_id or 0) != int(company.id):
+            flash('Selected employee does not belong to the selected company.', 'danger')
+            return render_template(
+                'reports.html',
+                companies=companies,
+                employees=employees,
+                company_reports=company_reports,
+                remittance=remittance,
+                employee_report=employee_report,
+                selected_company_id=selected_company_id,
+                selected_employee_id=selected_employee_id,
+                selected_date_from=selected_date_from,
+                selected_date_to=selected_date_to,
+            )
         date_from_d = _parse_date(date_from)
         date_to_d = _parse_date(date_to)
 
