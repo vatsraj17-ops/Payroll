@@ -8,7 +8,7 @@
       <select name="company_id" id="company_id" class="form-select form-select-sm">
         <option value="">-- Select company --</option>
         {% for c in companies %}
-          <option value="{{ c.id }}">{{ c.name }}</option>
+          <option value="{{ c.id }}" {% if selected_company_id and selected_company_id|int == c.id %}selected{% endif %}>{{ c.name }}</option>
         {% endfor %}
       </select>
     </div>
@@ -17,7 +17,7 @@
       <select name="employee_id" id="employee_id" class="form-select form-select-sm">
         <option value="">-- Select employee --</option>
         {% for e in employees %}
-          <option value="{{ e.id }}" data-pay-rate="{{ e.pay_rate or 0 }}">{{ e.first_name }} {{ e.last_name }}</option>
+          <option value="{{ e.id }}" data-company-id="{{ e.company_id or '' }}" data-pay-rate="{{ e.pay_rate or 0 }}">{{ e.first_name }} {{ e.last_name }}</option>
         {% endfor %}
       </select>
     </div>
@@ -103,10 +103,31 @@ document.addEventListener('DOMContentLoaded', function(){
   });
 
   // Auto-calc Gross = Total Hrs × Pay Rate (from selected employee)
+  const companySelect = document.getElementById('company_id');
   const employeeSelect = document.getElementById('employee_id');
   const hoursInput = document.getElementById('total_hours');
   const payRateInput = document.getElementById('pay_rate');
   const grossInput = document.getElementById('gross');
+
+  function filterEmployees() {
+    if (!employeeSelect || !companySelect) return;
+    const companyId = companySelect.value || '';
+    let hasSelection = false;
+    Array.from(employeeSelect.options).forEach((opt, index) => {
+      if (index === 0) return;
+      const optCompanyId = opt.getAttribute('data-company-id') || '';
+      const show = companyId && optCompanyId === companyId;
+      opt.hidden = !show;
+      if (show && opt.selected) {
+        hasSelection = true;
+      }
+    });
+    if (!hasSelection) {
+      employeeSelect.value = '';
+      if (payRateInput) payRateInput.value = '';
+      if (grossInput) grossInput.value = '';
+    }
+  }
 
   function getSelectedPayRate() {
     const opt = employeeSelect && employeeSelect.selectedOptions && employeeSelect.selectedOptions[0];
@@ -127,6 +148,10 @@ document.addEventListener('DOMContentLoaded', function(){
 
   employeeSelect && employeeSelect.addEventListener('change', recalcGross);
   hoursInput && hoursInput.addEventListener('input', recalcGross);
+  companySelect && companySelect.addEventListener('change', () => {
+    filterEmployees();
+  });
+  filterEmployees();
 });
 </script>
 

@@ -1940,14 +1940,34 @@ def edit_employee(employee_id):
 @require_admin
 def data_entry():
     companies = Company.query.all()
-    employees = Employee.query.all()
+    employees = Employee.query.order_by(Employee.first_name, Employee.last_name).all()
+    selected_company_id = (request.values.get('company_id') or '').strip()
     result = None
     if request.method == 'POST':
         action = (request.form.get('action') or 'preview').strip().lower()
+        company_id_raw = (request.form.get('company_id') or '').strip()
         emp_id = request.form.get('employee_id')
         hours_raw = (request.form.get('total_hours') or '').strip()
         gross_raw = (request.form.get('gross') or '').strip()
         employee = db.session.get(Employee, int(emp_id)) if emp_id else None
+
+        if not company_id_raw:
+            flash('Company is required.', 'danger')
+            return redirect(url_for('data_entry'))
+
+        try:
+            company_id_int = int(company_id_raw)
+        except Exception:
+            flash('Company selection is invalid.', 'danger')
+            return redirect(url_for('data_entry'))
+
+        allowed_company_ids = _allowed_company_ids_for_session()
+        if company_id_int not in allowed_company_ids:
+            abort(403)
+
+        if employee and int(employee.company_id or 0) != company_id_int:
+            flash('Selected employee does not belong to the selected company.', 'danger')
+            return redirect(url_for('data_entry'))
 
         hours = 0.0
         if hours_raw:
@@ -2120,7 +2140,14 @@ def data_entry():
             flash('Payroll line saved.', 'success')
         else:
             flash('Calculation complete.', 'info')
-    return render_template('data_entry.html', companies=companies, employees=employees, result=result, mode='submit')
+    return render_template(
+        'data_entry.html',
+        companies=companies,
+        employees=employees,
+        selected_company_id=selected_company_id,
+        result=result,
+        mode='submit',
+    )
 
 
 @app.route('/manage/data', methods=['GET'])
