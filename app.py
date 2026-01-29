@@ -933,22 +933,30 @@ def manage_employees():
     if _is_owner_session():
         company_id = str(session.get('company_id') or '').strip()
 
-    employees_for_dropdown = Employee.query
-    if company_id:
-        try:
-            employees_for_dropdown = employees_for_dropdown.filter(Employee.company_id == int(company_id))
-        except Exception:
-            employees_for_dropdown = employees_for_dropdown
-    employees_for_dropdown = employees_for_dropdown.order_by(Employee.first_name, Employee.last_name).all()
+    require_company_filter = False
+    if _is_admin_session() and not company_id:
+        employees_for_dropdown = []
+        require_company_filter = True
+    else:
+        employees_for_dropdown = Employee.query
+        if company_id:
+            try:
+                employees_for_dropdown = employees_for_dropdown.filter(Employee.company_id == int(company_id))
+            except Exception:
+                employees_for_dropdown = employees_for_dropdown
+        employees_for_dropdown = employees_for_dropdown.order_by(Employee.first_name, Employee.last_name).all()
 
     employees = []
     if run == '1':
-        q = Employee.query
-        if company_id:
-            q = q.filter(Employee.company_id == int(company_id))
-        if employee_id:
-            q = q.filter(Employee.id == int(employee_id))
-        employees = q.order_by(Employee.first_name, Employee.last_name).all()
+        if _is_admin_session() and not company_id:
+            require_company_filter = True
+        else:
+            q = Employee.query
+            if company_id:
+                q = q.filter(Employee.company_id == int(company_id))
+            if employee_id:
+                q = q.filter(Employee.id == int(employee_id))
+            employees = q.order_by(Employee.first_name, Employee.last_name).all()
 
     return render_template(
         'manage_employees.html',
@@ -958,6 +966,7 @@ def manage_employees():
         selected_company_id=company_id,
         selected_employee_id=employee_id,
         run=run,
+        require_company_filter=require_company_filter,
     )
 
 

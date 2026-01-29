@@ -36,6 +36,8 @@
 
 {% if not run %}
   <p class="text-muted">No employees shown. Use the dropdowns and click <strong>Filter</strong> to load.</p>
+{% elif require_company_filter %}
+  <p class="text-muted">Select a company to view employees.</p>
 {% elif employees and employees|length > 0 %}
   <table class="table table-sm align-middle">
     <thead>
