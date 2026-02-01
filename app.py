@@ -1727,6 +1727,9 @@ def subcontract_reports_pdf():
         supplier_address = _format_address_lines(supplier_obj.address) if supplier_obj and supplier_obj.address else ''
         supplier_hst = f"HST Number # {supplier_obj.tax_number} RT 0001" if supplier_obj and supplier_obj.tax_number else ''
 
+        story.append(Paragraph('Reports', title_style))
+        story.append(Spacer(1, 6))
+
         header_tbl = Table(
             [
                 [
@@ -1744,17 +1747,13 @@ def subcontract_reports_pdf():
         story.append(header_tbl)
         story.append(Spacer(1, 8))
 
-        story.append(Paragraph('Reports', title_style))
-        story.append(Spacer(1, 6))
-
         supplier_tbl = Table(
             [
                 [
-                    Paragraph("<b>Supplier</b>", label_style),
                     Paragraph(f"{supplier}<br/>{supplier_address}<br/>{supplier_hst}", value_style),
                 ]
             ],
-            colWidths=[doc.width * 0.2, doc.width * 0.8],
+            colWidths=[doc.width],
         )
         supplier_tbl.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
