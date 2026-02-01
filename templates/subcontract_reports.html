@@ -1,8 +1,32 @@
 {% extends 'base.html' %}
 {% block content %}
+<style>
+  .report-card {
+    border: 1px solid #e5e7eb;
+  }
+  .report-title {
+    color: #3b82f6;
+    font-size: 20px;
+    font-weight: 600;
+    text-align: center;
+  }
+  .report-table thead th {
+    background: #eef3f8;
+    color: #2b5a85;
+    font-weight: 600;
+  }
+  .report-totals {
+    max-width: 360px;
+    margin-left: auto;
+  }
+  .report-totals .label {
+    color: #6b7280;
+  }
+</style>
+
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-  <div>
-    <h2 class="mb-1" style="text-align:center; width:100%;">Reports</h2>
+  <div style="width:100%;">
+    <div class="report-title">Reports</div>
   </div>
   <div class="d-flex gap-2">
     <button class="btn btn-sm" style="background:#16a34a; color:#fff; border:1px solid #16a34a;" type="button" onclick="window.print()">View</button>
@@ -53,7 +77,7 @@
   <p class="text-muted">Select a company to view reports.</p>
 {% elif bills and bills|length > 0 %}
   {% set first_bill = bills[0] %}
-  <div class="card mb-4" style="border:1px solid #e5e7eb;">
+  <div class="card report-card mb-4">
     <div class="card-body">
       <div class="d-flex justify-content-between flex-wrap gap-3">
         <div>
@@ -72,8 +96,8 @@
 
       <hr>
 
-      <table class="table table-sm align-middle">
-        <thead style="background:#eef2f7;">
+      <table class="table table-sm align-middle report-table">
+        <thead>
           <tr>
             <th style="width:120px;">Date</th>
             <th>Description</th>
@@ -95,21 +119,18 @@
         </tbody>
       </table>
 
-      <div class="row">
-        <div class="col-12 col-md-6"></div>
-        <div class="col-12 col-md-6">
-          <div class="d-flex justify-content-between">
-            <div class="text-muted">Subtotal</div>
-            <div class="fw-semibold">{{ totals.amount | money }}</div>
-          </div>
-          <div class="d-flex justify-content-between">
-            <div class="text-muted">Sales Tax Total</div>
-            <div class="fw-semibold">{{ totals.gst | money }}</div>
-          </div>
-          <div class="d-flex justify-content-between border-top pt-2 mt-2">
-            <div class="text-muted">Total</div>
-            <div class="fw-semibold">{{ totals.total | money }}</div>
-          </div>
+      <div class="report-totals">
+        <div class="d-flex justify-content-between">
+          <div class="label">Subtotal</div>
+          <div class="fw-semibold">{{ totals.amount | money }}</div>
+        </div>
+        <div class="d-flex justify-content-between">
+          <div class="label">Sales Tax Total</div>
+          <div class="fw-semibold">{{ totals.gst | money }}</div>
+        </div>
+        <div class="d-flex justify-content-between border-top pt-2 mt-2">
+          <div class="label">Total</div>
+          <div class="fw-semibold">{{ totals.total | money }}</div>
         </div>
       </div>
     </div>
