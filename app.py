@@ -1747,11 +1747,16 @@ def subcontract_reports_pdf():
         story.append(header_tbl)
         story.append(Spacer(1, 8))
 
+        story.append(Spacer(1, 10))
+
         supplier_tbl = Table(
             [
                 [
-                    Paragraph(f"{supplier}<br/>{supplier_address}<br/>{supplier_hst}", value_style),
-                ]
+                    Paragraph("<font color='#2b5a85'><b>Supplier</b></font>", value_style),
+                ],
+                [
+                    Paragraph(f"<b>{supplier}</b><br/>{supplier_address}<br/>{supplier_hst}", value_style),
+                ],
             ],
             colWidths=[doc.width],
         )
