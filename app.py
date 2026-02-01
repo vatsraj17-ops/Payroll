@@ -1649,9 +1649,10 @@ def subcontract_reports_pdf():
     import io
     from reportlab.lib.pagesizes import letter
     from reportlab.lib.units import inch
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
     from reportlab.lib import colors
-    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
     company_id = (request.args.get('company_id') or '').strip()
     subcontractor_id = (request.args.get('subcontractor_id') or '').strip()
@@ -1692,6 +1693,9 @@ def subcontract_reports_pdf():
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
     styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('ReportTitle', parent=styles['Heading2'], alignment=TA_CENTER, textColor=colors.HexColor('#3b82f6'))
+    label_style = ParagraphStyle('Label', parent=styles['BodyText'], textColor=colors.HexColor('#6b7280'))
+    value_style = ParagraphStyle('Value', parent=styles['BodyText'])
     story = []
 
     def _money(value: float) -> str:
@@ -1704,19 +1708,27 @@ def subcontract_reports_pdf():
         story.append(Paragraph('No subcontract bills match the selected filters.', styles['BodyText']))
     else:
         first_bill = bills[0]
-        company_name = first_bill.company.name if first_bill.company else ''
-        supplier = first_bill.subcontractor.contractor_company_name if first_bill.subcontractor else ''
+        company = first_bill.company
+        supplier_obj = first_bill.subcontractor
+        company_name = company.name if company else ''
+        company_address = company.address if company and company.address else ''
+        supplier = supplier_obj.contractor_company_name if supplier_obj else ''
 
-        story.append(Paragraph('Reports', styles['Heading2']))
-        story.append(Spacer(1, 6))
+        story.append(Paragraph('Reports', title_style))
+        story.append(Spacer(1, 8))
 
         header_tbl = Table(
             [
                 [
-                    Paragraph(f"<b>Company</b><br/>{company_name}", styles['BodyText']),
-                    Paragraph(f"<b>Supplier</b><br/>{supplier}", styles['BodyText']),
-                    Paragraph(f"<b>Period</b><br/>{date_from} - {date_to}", styles['BodyText']),
-                ]
+                    Paragraph(f"<b>Company</b><br/>{company_name}", value_style),
+                    Paragraph(f"<b>Supplier</b><br/>{supplier}", value_style),
+                    Paragraph(f"<b>Period</b><br/>{date_from} - {date_to}", value_style),
+                ],
+                [
+                    Paragraph(f"<font color='#6b7280'>Address</font><br/>{company_address}", label_style),
+                    Paragraph("", value_style),
+                    Paragraph("", value_style),
+                ],
             ],
             colWidths=[doc.width * 0.34, doc.width * 0.33, doc.width * 0.33],
         )
@@ -1724,6 +1736,7 @@ def subcontract_reports_pdf():
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             ('LEFTPADDING', (0, 0), (-1, -1), 0),
             ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
         story.append(header_tbl)
         story.append(Spacer(1, 10))
@@ -1749,10 +1762,10 @@ def subcontract_reports_pdf():
 
         line_tbl = Table(
             line_rows,
-            colWidths=[1.0 * inch, 3.2 * inch, 1.1 * inch, 1.1 * inch, 1.1 * inch],
+            colWidths=[1.1 * inch, 3.0 * inch, 1.2 * inch, 1.1 * inch, 1.1 * inch],
         )
         line_tbl.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e9eff6')),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#eef3f8')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#2b5a85')),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 9),
