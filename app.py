@@ -1696,6 +1696,7 @@ def subcontract_reports_pdf():
     title_style = ParagraphStyle('ReportTitle', parent=styles['Heading2'], alignment=TA_CENTER, textColor=colors.HexColor('#3b82f6'))
     label_style = ParagraphStyle('Label', parent=styles['BodyText'], textColor=colors.HexColor('#6b7280'))
     value_style = ParagraphStyle('Value', parent=styles['BodyText'])
+    meta_right = ParagraphStyle('MetaRight', parent=styles['BodyText'], alignment=TA_RIGHT)
     story = []
 
     def _money(value: float) -> str:
@@ -1712,33 +1713,46 @@ def subcontract_reports_pdf():
         supplier_obj = first_bill.subcontractor
         company_name = company.name if company else ''
         company_address = company.address if company and company.address else ''
+        company_hst = f"HST Number # {company.business_number} RT0001" if company and company.business_number else ''
         supplier = supplier_obj.contractor_company_name if supplier_obj else ''
-
-        story.append(Paragraph('Reports', title_style))
-        story.append(Spacer(1, 8))
+        supplier_address = supplier_obj.address if supplier_obj and supplier_obj.address else ''
+        supplier_hst = f"HST Number # {supplier_obj.tax_number} RT 0001" if supplier_obj and supplier_obj.tax_number else ''
 
         header_tbl = Table(
             [
                 [
-                    Paragraph(f"<b>Company</b><br/>{company_name}", value_style),
-                    Paragraph(f"<b>Supplier</b><br/>{supplier}", value_style),
-                    Paragraph(f"<b>Period</b><br/>{date_from} - {date_to}", value_style),
-                ],
-                [
-                    Paragraph(f"<font color='#6b7280'>Address</font><br/>{company_address}", label_style),
-                    Paragraph("", value_style),
-                    Paragraph("", value_style),
+                    Paragraph(f"<b>{company_name}</b><br/>{company_address}<br/>{company_hst}", value_style),
+                    Paragraph(f"<b>Period</b><br/>{date_from} - {date_to}", meta_right),
                 ],
             ],
-            colWidths=[doc.width * 0.34, doc.width * 0.33, doc.width * 0.33],
+            colWidths=[doc.width * 0.7, doc.width * 0.3],
         )
         header_tbl.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             ('LEFTPADDING', (0, 0), (-1, -1), 0),
             ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
         story.append(header_tbl)
+        story.append(Spacer(1, 8))
+
+        story.append(Paragraph('Reports', title_style))
+        story.append(Spacer(1, 6))
+
+        supplier_tbl = Table(
+            [
+                [
+                    Paragraph("<b>Supplier</b>", label_style),
+                    Paragraph(f"{supplier}<br/>{supplier_address}<br/>{supplier_hst}", value_style),
+                ]
+            ],
+            colWidths=[doc.width * 0.2, doc.width * 0.8],
+        )
+        supplier_tbl.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        story.append(supplier_tbl)
         story.append(Spacer(1, 10))
 
         line_rows = [['DATE', 'DESCRIPTION', 'SUBTOTAL', 'GST/HST', 'TOTAL']]
@@ -1762,7 +1776,7 @@ def subcontract_reports_pdf():
 
         line_tbl = Table(
             line_rows,
-            colWidths=[1.1 * inch, 3.0 * inch, 1.2 * inch, 1.1 * inch, 1.1 * inch],
+            colWidths=[1.2 * inch, 2.9 * inch, 1.2 * inch, 1.1 * inch, 1.1 * inch],
         )
         line_tbl.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#eef3f8')),
