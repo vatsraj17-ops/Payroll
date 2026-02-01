@@ -1705,6 +1705,15 @@ def subcontract_reports_pdf():
         except Exception:
             return "$0.00"
 
+    def _format_address_lines(raw: str) -> str:
+        if not raw:
+            return ''
+        if '\n' in raw:
+            parts = [p.strip() for p in raw.split('\n') if p.strip()]
+        else:
+            parts = [p.strip() for p in raw.split(',') if p.strip()]
+        return '<br/>'.join(parts)
+
     if not bills:
         story.append(Paragraph('No subcontract bills match the selected filters.', styles['BodyText']))
     else:
@@ -1712,10 +1721,10 @@ def subcontract_reports_pdf():
         company = first_bill.company
         supplier_obj = first_bill.subcontractor
         company_name = company.name if company else ''
-        company_address = company.address if company and company.address else ''
+        company_address = _format_address_lines(company.address) if company and company.address else ''
         company_hst = f"HST Number # {company.business_number} RT0001" if company and company.business_number else ''
         supplier = supplier_obj.contractor_company_name if supplier_obj else ''
-        supplier_address = supplier_obj.address if supplier_obj and supplier_obj.address else ''
+        supplier_address = _format_address_lines(supplier_obj.address) if supplier_obj and supplier_obj.address else ''
         supplier_hst = f"HST Number # {supplier_obj.tax_number} RT 0001" if supplier_obj and supplier_obj.tax_number else ''
 
         header_tbl = Table(
