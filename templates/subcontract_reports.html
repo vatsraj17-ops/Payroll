@@ -84,10 +84,12 @@
           <div class="text-muted" style="font-size:0.9rem;">Company</div>
           <div class="fw-semibold">{{ first_bill.company.name if first_bill.company else '' }}</div>
         </div>
-        <div>
-          <div class="text-muted" style="font-size:0.9rem;">Supplier</div>
-          <div class="fw-semibold">{{ first_bill.subcontractor.contractor_company_name if first_bill.subcontractor else '' }}</div>
-        </div>
+        {% if not show_supplier_column %}
+          <div>
+            <div class="text-muted" style="font-size:0.9rem;">Supplier</div>
+            <div class="fw-semibold">{{ first_bill.subcontractor.contractor_company_name if first_bill.subcontractor else '' }}</div>
+          </div>
+        {% endif %}
         <div>
           <div class="text-muted" style="font-size:0.9rem;">Period</div>
           <div class="fw-semibold">{{ selected_date_from }}{% if selected_date_from or selected_date_to %} - {% endif %}{{ selected_date_to }}</div>
@@ -100,6 +102,9 @@
         <thead>
           <tr>
             <th style="width:120px;">Date</th>
+            {% if show_supplier_column %}
+              <th>Supplier</th>
+            {% endif %}
             <th>Description</th>
             <th class="text-end">Subtotal</th>
             <th class="text-end">GST/HST</th>
@@ -110,6 +115,9 @@
           {% for b in bills %}
             <tr>
               <td>{{ b.bill_date }}</td>
+              {% if show_supplier_column %}
+                <td>{{ b.subcontractor.contractor_company_name if b.subcontractor else '' }}</td>
+              {% endif %}
               <td>{{ b.description or 'Subcontract' }}</td>
               <td class="text-end">{{ (b.amount or 0) | money }}</td>
               <td class="text-end">{{ (b.gst_amount or 0) | money }}</td>

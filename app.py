@@ -1624,6 +1624,7 @@ def subcontract_reports():
                 totals['gst'] += float(b.gst_amount or 0.0)
                 totals['total'] += float(b.total or 0.0)
 
+    show_supplier_column = not subcontractor_id
     return render_template(
         'subcontract_reports.html',
         companies=companies,
@@ -1637,6 +1638,7 @@ def subcontract_reports():
         run=run,
         schema_ready=schema_ready,
         require_company_filter=require_company_filter,
+        show_supplier_column=show_supplier_column,
     )
 
 
@@ -1689,6 +1691,7 @@ def subcontract_reports_pdf():
         q = q.filter(SubcontractBill.bill_date <= date_to)
 
     bills = q.order_by(SubcontractBill.bill_date.desc(), SubcontractBill.id.desc()).all()
+    show_supplier_column = not subcontractor_id
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
@@ -1747,28 +1750,32 @@ def subcontract_reports_pdf():
         story.append(header_tbl)
         story.append(Spacer(1, 8))
 
-        story.append(Spacer(1, 10))
+        if not show_supplier_column:
+            story.append(Spacer(1, 10))
 
-        supplier_tbl = Table(
-            [
+            supplier_tbl = Table(
                 [
-                    Paragraph("<font color='#2b5a85'><b>Supplier</b></font>", value_style),
+                    [
+                        Paragraph("<font color='#2b5a85'><b>Supplier</b></font>", value_style),
+                    ],
+                    [
+                        Paragraph(f"<b>{supplier}</b><br/>{supplier_address}<br/>{supplier_hst}", value_style),
+                    ],
                 ],
-                [
-                    Paragraph(f"<b>{supplier}</b><br/>{supplier_address}<br/>{supplier_hst}", value_style),
-                ],
-            ],
-            colWidths=[doc.width],
-        )
-        supplier_tbl.setStyle(TableStyle([
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 0),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-        ]))
-        story.append(supplier_tbl)
-        story.append(Spacer(1, 10))
+                colWidths=[doc.width],
+            )
+            supplier_tbl.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ]))
+            story.append(supplier_tbl)
+            story.append(Spacer(1, 10))
 
-        line_rows = [['DATE', 'DESCRIPTION', 'SUBTOTAL', 'GST/HST', 'TOTAL']]
+        if show_supplier_column:
+            line_rows = [['DATE', 'SUPPLIER', 'DESCRIPTION', 'SUBTOTAL', 'GST/HST', 'TOTAL']]
+        else:
+            line_rows = [['DATE', 'DESCRIPTION', 'SUBTOTAL', 'GST/HST', 'TOTAL']]
         total_amount = 0.0
         total_gst = 0.0
         total_all = 0.0
@@ -1779,18 +1786,34 @@ def subcontract_reports_pdf():
             total_amount += amount
             total_gst += gst_amount
             total_all += total
-            line_rows.append([
-                b.bill_date.strftime('%Y-%m-%d') if b.bill_date else '',
-                b.description or 'Subcontract',
-                _money(amount),
-                _money(gst_amount),
-                _money(total),
-            ])
+            if show_supplier_column:
+                line_rows.append([
+                    b.bill_date.strftime('%Y-%m-%d') if b.bill_date else '',
+                    b.subcontractor.contractor_company_name if b.subcontractor else '',
+                    b.description or 'Subcontract',
+                    _money(amount),
+                    _money(gst_amount),
+                    _money(total),
+                ])
+            else:
+                line_rows.append([
+                    b.bill_date.strftime('%Y-%m-%d') if b.bill_date else '',
+                    b.description or 'Subcontract',
+                    _money(amount),
+                    _money(gst_amount),
+                    _money(total),
+                ])
 
-        line_tbl = Table(
-            line_rows,
-            colWidths=[1.2 * inch, 2.9 * inch, 1.2 * inch, 1.1 * inch, 1.1 * inch],
-        )
+        if show_supplier_column:
+            line_tbl = Table(
+                line_rows,
+                colWidths=[1.0 * inch, 1.6 * inch, 2.2 * inch, 1.0 * inch, 1.0 * inch, 1.0 * inch],
+            )
+        else:
+            line_tbl = Table(
+                line_rows,
+                colWidths=[1.2 * inch, 2.9 * inch, 1.2 * inch, 1.1 * inch, 1.1 * inch],
+            )
         line_tbl.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#eef3f8')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#2b5a85')),
