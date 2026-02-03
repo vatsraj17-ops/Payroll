@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% set hide_nav = true %}
+{% set hide_sidebar = true %}
+{% set show_hamburger = false %}
+{% block content %}
+<div class="row">
+  <div class="col-12 col-lg-3 mb-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="fw-semibold mb-2">Sales</div>
+        <div class="d-grid gap-2">
+          <a class="btn btn-outline-secondary btn-sm" href="/sales">Sales Invoice</a>
+          <a class="btn btn-outline-secondary btn-sm" href="/sales#customer">Customers</a>
+          <a class="btn btn-outline-secondary btn-sm" href="/sales/reports">Reports</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-9">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+      <div>
+        <h2 class="mb-1">Sales Reports</h2>
+        <div class="text-muted" style="font-size:0.95rem;">Filter invoices by period and customer.</div>
+      </div>
+    </div>
+
+    <form method="get" action="/sales/reports" class="mb-3">
+      <input type="hidden" name="run" value="1">
+      <div class="row g-2">
+        <div class="col-12 col-md-4">
+          <label class="form-label" style="font-size:0.9rem;">Company</label>
+          <select name="company_id" class="form-select form-select-sm" {% if session.get('role') == 'owner' %}disabled{% endif %}>
+            <option value="">-- Company --</option>
+            {% for c in companies %}
+              <option value="{{ c.id }}" {% if selected_company_id and selected_company_id|int == c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+          {% if session.get('role') == 'owner' %}
+            <input type="hidden" name="company_id" value="{{ selected_company_id }}">
+          {% endif %}
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label" style="font-size:0.9rem;">Customer</label>
+          <select name="customer_id" class="form-select form-select-sm">
+            <option value="">-- Customer --</option>
+            {% for c in customers %}
+              <option value="{{ c.id }}" {% if selected_customer_id and selected_customer_id|int == c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-md-2">
+          <label class="form-label" style="font-size:0.9rem;">From</label>
+          <input name="date_from" type="date" class="form-control form-control-sm" value="{{ selected_date_from }}">
+        </div>
+        <div class="col-12 col-md-2">
+          <label class="form-label" style="font-size:0.9rem;">To</label>
+          <input name="date_to" type="date" class="form-control form-control-sm" value="{{ selected_date_to }}">
+        </div>
+      </div>
+      <div class="mt-2">
+        <button class="btn btn-success btn-sm" type="submit">View</button>
+      </div>
+    </form>
+
+    {% if run != '1' %}
+      <p class="text-muted">Select filters to load sales reports.</p>
+    {% elif require_company_filter %}
+      <p class="text-muted">Select a company to view reports.</p>
+    {% elif invoices and invoices|length > 0 %}
+      <div class="card mb-3">
+        <div class="card-body">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Invoice #</th>
+                <th>Date</th>
+                <th>Customer</th>
+                <th class="text-end">Subtotal</th>
+                <th class="text-end">Tax</th>
+                <th class="text-end">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for inv in invoices %}
+                <tr>
+                  <td>{{ inv.id }}</td>
+                  <td>{{ inv.invoice_date }}</td>
+                  <td>{{ inv.customer.name if inv.customer else '' }}</td>
+                  <td class="text-end">{{ (inv.subtotal or 0) | money }}</td>
+                  <td class="text-end">{{ (inv.tax_total or 0) | money }}</td>
+                  <td class="text-end">{{ (inv.total or 0) | money }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <div class="d-flex justify-content-end">
+            <div style="min-width:260px;">
+              <div class="d-flex justify-content-between"><span class="text-muted">Subtotal</span><strong>{{ totals.subtotal | money }}</strong></div>
+              <div class="d-flex justify-content-between"><span class="text-muted">Tax</span><strong>{{ totals.tax | money }}</strong></div>
+              <div class="d-flex justify-content-between border-top pt-2 mt-2"><span class="text-muted">Total</span><strong>{{ totals.total | money }}</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <p class="text-muted">No invoices match the selected filters.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

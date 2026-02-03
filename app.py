@@ -1030,6 +1030,78 @@ def sales_invoice_print(invoice_id: int):
     return render_template('sales_invoice_print.html', invoice=invoice)
 
 
+@app.route('/sales/reports', methods=['GET'])
+@require_login
+def sales_reports():
+    if _is_admin_session():
+        companies = Company.query.order_by(Company.name).all()
+    else:
+        cid = session.get('company_id')
+        companies = Company.query.filter(Company.id == int(cid)).order_by(Company.name).all() if cid else []
+
+    company_id = (request.args.get('company_id') or '').strip()
+    customer_id = (request.args.get('customer_id') or '').strip()
+    date_from = (request.args.get('date_from') or '').strip()
+    date_to = (request.args.get('date_to') or '').strip()
+    run = (request.args.get('run') or '').strip()
+
+    if _is_owner_session():
+        company_id = str(session.get('company_id') or '').strip()
+
+    customers = []
+    require_company_filter = False
+    if company_id:
+        try:
+            company_id_int = int(company_id)
+        except Exception:
+            company_id_int = None
+        else:
+            customers = (
+                Customer.query
+                .filter(Customer.company_id == company_id_int)
+                .order_by(Customer.name.asc())
+                .all()
+            )
+    else:
+        if _is_admin_session():
+            require_company_filter = True
+
+    invoices = []
+    totals = {'subtotal': 0.0, 'tax': 0.0, 'total': 0.0}
+    if run == '1':
+        if _is_admin_session() and not company_id:
+            require_company_filter = True
+        else:
+            q = SalesInvoice.query
+            if company_id:
+                q = q.filter(SalesInvoice.company_id == int(company_id))
+            if customer_id:
+                q = q.filter(SalesInvoice.customer_id == int(customer_id))
+            if date_from:
+                q = q.filter(SalesInvoice.invoice_date >= date_from)
+            if date_to:
+                q = q.filter(SalesInvoice.invoice_date <= date_to)
+            invoices = q.order_by(SalesInvoice.invoice_date.desc(), SalesInvoice.id.desc()).all()
+            for inv in invoices:
+                totals['subtotal'] += float(inv.subtotal or 0.0)
+                totals['tax'] += float(inv.tax_total or 0.0)
+                totals['total'] += float(inv.total or 0.0)
+
+    return render_template(
+        'sales_reports.html',
+        companies=companies,
+        customers=customers,
+        invoices=invoices,
+        totals=totals,
+        selected_company_id=company_id,
+        selected_customer_id=customer_id,
+        selected_date_from=date_from,
+        selected_date_to=date_to,
+        run=run,
+        require_company_filter=require_company_filter,
+    )
+
+
 @app.route('/employees', methods=['GET', 'POST'])
 @require_login
 def employees():
