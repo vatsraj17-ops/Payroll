@@ -5,7 +5,19 @@ import os
 import datetime
 import json
 from flask_sqlalchemy import SQLAlchemy
-from models import db, Company, Employee, PayrollLine, User, PayrollSubmission, Subcontractor, SubcontractBill
+from models import (
+    db,
+    Company,
+    Employee,
+    PayrollLine,
+    User,
+    PayrollSubmission,
+    Subcontractor,
+    SubcontractBill,
+    Customer,
+    SalesInvoice,
+    SalesInvoiceLine,
+)
 from calc import calculate_payroll
 from sqlalchemy import func, inspect, text
 import random
@@ -785,6 +797,237 @@ def expenses_home():
         date_to=today,
         schema_ready=schema_ready,
     )
+
+
+@app.route('/sales', methods=['GET', 'POST'])
+@require_login
+def sales_home():
+    if _is_admin_session():
+        companies = Company.query.order_by(Company.name).all()
+    else:
+        cid = session.get('company_id')
+        companies = Company.query.filter(Company.id == int(cid)).order_by(Company.name).all() if cid else []
+
+    selected_company_id = (request.values.get('company_id') or '').strip()
+    if _is_owner_session():
+        selected_company_id = str(session.get('company_id') or '').strip()
+
+    customers = []
+    invoices = []
+    if selected_company_id:
+        try:
+            company_id_int = int(selected_company_id)
+        except Exception:
+            company_id_int = None
+        else:
+            customers = (
+                Customer.query
+                .filter(Customer.company_id == company_id_int)
+                .order_by(Customer.name.asc())
+                .all()
+            )
+            invoices = (
+                SalesInvoice.query
+                .filter(SalesInvoice.company_id == company_id_int)
+                .order_by(SalesInvoice.created_at.desc(), SalesInvoice.id.desc())
+                .limit(50)
+                .all()
+            )
+
+    if request.method == 'POST':
+        form_type = (request.form.get('form_type') or '').strip()
+        if form_type == 'customer':
+            company_id_raw = (request.form.get('company_id') or '').strip()
+            name = (request.form.get('customer_name') or '').strip()
+            company_name = (request.form.get('customer_company') or '').strip()
+            email = (request.form.get('customer_email') or '').strip()
+            phone = (request.form.get('customer_phone') or '').strip()
+            address = (request.form.get('customer_address') or '').strip()
+            tax_number = (request.form.get('customer_tax') or '').strip()
+
+            if _is_owner_session():
+                company_id_raw = str(session.get('company_id') or '').strip()
+
+            if not company_id_raw:
+                flash('Company is required.', 'danger')
+                return redirect(url_for('sales_home'))
+            if not name:
+                flash('Customer name is required.', 'danger')
+                return redirect(url_for('sales_home', company_id=company_id_raw))
+
+            try:
+                company_id_int = int(company_id_raw)
+            except Exception:
+                flash('Company selection is invalid.', 'danger')
+                return redirect(url_for('sales_home'))
+
+            allowed_company_ids = _allowed_company_ids_for_session()
+            if company_id_int not in allowed_company_ids:
+                abort(403)
+
+            customer = Customer(
+                company_id=company_id_int,
+                name=name,
+                company_name=company_name or None,
+                email=email or None,
+                phone=phone or None,
+                address=address or None,
+                tax_number=tax_number or None,
+            )
+            db.session.add(customer)
+            db.session.commit()
+            flash('Customer saved.', 'success')
+            return redirect(url_for('sales_home', company_id=company_id_int))
+
+        if form_type == 'invoice':
+            company_id_raw = (request.form.get('company_id') or '').strip()
+            customer_id_raw = (request.form.get('customer_id') or '').strip()
+            invoice_date_raw = (request.form.get('invoice_date') or '').strip()
+            due_date_raw = (request.form.get('due_date') or '').strip()
+            terms = (request.form.get('terms') or '').strip()
+            message = (request.form.get('message') or '').strip()
+            statement_message = (request.form.get('statement_message') or '').strip()
+            lines_raw = (request.form.get('invoice_lines_json') or '').strip()
+
+            if _is_owner_session():
+                company_id_raw = str(session.get('company_id') or '').strip()
+
+            if not company_id_raw:
+                flash('Company is required.', 'danger')
+                return redirect(url_for('sales_home'))
+            if not customer_id_raw:
+                flash('Customer is required.', 'danger')
+                return redirect(url_for('sales_home', company_id=company_id_raw))
+
+            try:
+                company_id_int = int(company_id_raw)
+            except Exception:
+                flash('Company selection is invalid.', 'danger')
+                return redirect(url_for('sales_home'))
+
+            allowed_company_ids = _allowed_company_ids_for_session()
+            if company_id_int not in allowed_company_ids:
+                abort(403)
+
+            try:
+                customer_id_int = int(customer_id_raw)
+            except Exception:
+                flash('Customer selection is invalid.', 'danger')
+                return redirect(url_for('sales_home', company_id=company_id_raw))
+
+            customer = db.session.get(Customer, customer_id_int)
+            if not customer or int(customer.company_id or 0) != company_id_int:
+                flash('Customer does not belong to this company.', 'danger')
+                return redirect(url_for('sales_home', company_id=company_id_raw))
+
+            invoice_date = _parse_date(invoice_date_raw)
+            if not invoice_date:
+                flash('Invoice date is required.', 'danger')
+                return redirect(url_for('sales_home', company_id=company_id_raw))
+
+            due_date = _parse_date(due_date_raw) if due_date_raw else None
+            if due_date_raw and not due_date:
+                flash('Due date must be valid.', 'danger')
+                return redirect(url_for('sales_home', company_id=company_id_raw))
+
+            try:
+                lines = json.loads(lines_raw) if lines_raw else []
+            except Exception:
+                lines = []
+
+            if not lines:
+                flash('Add at least one invoice line.', 'danger')
+                return redirect(url_for('sales_home', company_id=company_id_raw))
+
+            subtotal = 0.0
+            tax_total = 0.0
+            total = 0.0
+            invoice = SalesInvoice(
+                company_id=company_id_int,
+                customer_id=customer_id_int,
+                invoice_date=invoice_date,
+                due_date=due_date,
+                terms=terms or None,
+                message=message or None,
+                statement_message=statement_message or None,
+            )
+            db.session.add(invoice)
+            db.session.flush()
+
+            for line in lines:
+                service = (line.get('service') or '').strip()
+                description = (line.get('description') or '').strip()
+                try:
+                    qty = float(line.get('qty') or 0)
+                except Exception:
+                    qty = 0.0
+                try:
+                    rate = float(line.get('rate') or 0)
+                except Exception:
+                    rate = 0.0
+                taxable = bool(line.get('taxable'))
+                amount = qty * rate
+                tax_amount = amount * 0.13 if taxable else 0.0
+                line_total = amount + tax_amount
+
+                subtotal += amount
+                tax_total += tax_amount
+                total += line_total
+
+                db.session.add(SalesInvoiceLine(
+                    invoice_id=invoice.id,
+                    service=service or None,
+                    description=description or None,
+                    qty=qty,
+                    rate=rate,
+                    taxable=taxable,
+                    amount=amount,
+                    tax_amount=tax_amount,
+                    total=line_total,
+                ))
+
+            invoice.subtotal = subtotal
+            invoice.tax_total = tax_total
+            invoice.total = total
+            invoice.balance_due = total
+            db.session.commit()
+            flash('Invoice saved.', 'success')
+            return redirect(url_for('sales_home', company_id=company_id_int, invoice_id=invoice.id))
+
+    selected_invoice_id = (request.args.get('invoice_id') or '').strip()
+    saved_invoice = None
+    if selected_invoice_id.isdigit():
+        try:
+            candidate = db.session.get(SalesInvoice, int(selected_invoice_id))
+        except Exception:
+            candidate = None
+        if candidate:
+            if _is_admin_session() or int(candidate.company_id or 0) == int(session.get('company_id') or 0):
+                saved_invoice = candidate
+
+    return render_template(
+        'sales_home.html',
+        companies=companies,
+        customers=customers,
+        invoices=invoices,
+        selected_company_id=selected_company_id,
+        saved_invoice=saved_invoice,
+    )
+
+
+@app.route('/sales/invoices/<int:invoice_id>/print', methods=['GET'])
+@require_login
+def sales_invoice_print(invoice_id: int):
+    invoice = db.session.get(SalesInvoice, invoice_id)
+    if not invoice:
+        abort(404)
+
+    if not _is_admin_session():
+        cid = session.get('company_id')
+        if not cid or int(cid) != int(invoice.company_id or 0):
+            abort(403)
+
+    return render_template('sales_invoice_print.html', invoice=invoice)
 
 
 @app.route('/employees', methods=['GET', 'POST'])

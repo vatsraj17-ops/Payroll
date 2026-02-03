@@ -134,3 +134,51 @@ class SubcontractBill(db.Model):
 
     company = db.relationship('Company', backref=db.backref('subcontract_bills', lazy=True))
     subcontractor = db.relationship('Subcontractor', backref=db.backref('bills', lazy=True))
+
+
+class Customer(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    name = db.Column(db.String(128), nullable=False)
+    company_name = db.Column(db.String(128), nullable=True)
+    email = db.Column(db.String(128), nullable=True)
+    phone = db.Column(db.String(32), nullable=True)
+    address = db.Column(db.String(256), nullable=True)
+    tax_number = db.Column(db.String(32), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    company = db.relationship('Company', backref=db.backref('customers', lazy=True))
+
+
+class SalesInvoice(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=False)
+    invoice_date = db.Column(db.Date, nullable=False)
+    due_date = db.Column(db.Date, nullable=True)
+    terms = db.Column(db.String(32), nullable=True)
+    message = db.Column(db.String(512), nullable=True)
+    statement_message = db.Column(db.String(512), nullable=True)
+    subtotal = db.Column(db.Float, default=0.0)
+    tax_total = db.Column(db.Float, default=0.0)
+    total = db.Column(db.Float, default=0.0)
+    balance_due = db.Column(db.Float, default=0.0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    company = db.relationship('Company', backref=db.backref('sales_invoices', lazy=True))
+    customer = db.relationship('Customer', backref=db.backref('invoices', lazy=True))
+
+
+class SalesInvoiceLine(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_id = db.Column(db.Integer, db.ForeignKey('sales_invoice.id'), nullable=False)
+    service = db.Column(db.String(128), nullable=True)
+    description = db.Column(db.String(256), nullable=True)
+    qty = db.Column(db.Float, default=0.0)
+    rate = db.Column(db.Float, default=0.0)
+    taxable = db.Column(db.Boolean, default=True)
+    amount = db.Column(db.Float, default=0.0)
+    tax_amount = db.Column(db.Float, default=0.0)
+    total = db.Column(db.Float, default=0.0)
+
+    invoice = db.relationship('SalesInvoice', backref=db.backref('lines', lazy=True))

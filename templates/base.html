@@ -76,6 +76,7 @@
       {% set role = session.get('role') %}
       {% set path = request.path %}
       {% set is_expenses = path.startswith('/subcontracts') or path.startswith('/expenses') %}
+      {% set is_sales = path.startswith('/sales') %}
       {% set is_payroll = path.startswith('/payroll') or path.startswith('/data-entry') or path.startswith('/employees') or path.startswith('/companies') or path.startswith('/reports') or path.startswith('/manage/companies') or path.startswith('/manage/employees') or path.startswith('/manage/data') or path.startswith('/admin/submissions') or path.startswith('/owner/payroll') %}
       {% set hide_sidebar = hide_sidebar|default(false) %}
       {% set hide_nav = hide_nav|default(false) %}
@@ -86,6 +87,7 @@
           <div class="nav-card"><a href="/">Home</a></div>
           <div class="nav-card"><a href="/payroll">Run Payroll</a></div>
           <div class="nav-card"><a href="/expenses">Expenses &amp; Bills</a></div>
+          <div class="nav-card"><a href="/sales">Sales Invoice</a></div>
         </div>
       {% endif %}
     </div>
@@ -101,7 +103,7 @@
 
           <div class="offcanvas offcanvas-start" tabindex="-1" id="leftMenu" aria-labelledby="leftMenuLabel">
             <div class="offcanvas-header">
-              <h5 class="offcanvas-title" id="leftMenuLabel">{% if is_expenses %}Bills &amp; Payments{% else %}Navigation{% endif %}</h5>
+              <h5 class="offcanvas-title" id="leftMenuLabel">{% if is_expenses %}Bills &amp; Payments{% elif is_sales %}Sales{% else %}Navigation{% endif %}</h5>
               <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
             </div>
             <div class="offcanvas-body">
@@ -115,6 +117,14 @@
                     <li><a href="/subcontracts/bills" style="color:#000; text-decoration:none;">Bills &amp; Payments</a></li>
                     <li><a href="/subcontracts/bills?run=1" style="color:#000; text-decoration:none;">Edit Bills</a></li>
                     <li><a href="/subcontracts/reports" style="color:#000; text-decoration:none;">Reports</a></li>
+                  </ul>
+                </div>
+              {% elif is_sales %}
+                <div class="mb-3">
+                  <div class="fw-semibold mb-2">Sales</div>
+                  <ul class="mb-0" style="padding-left:1.1rem;">
+                    <li><a href="/" style="color:#000; text-decoration:none;">Home</a></li>
+                    <li><a href="/sales" style="color:#000; text-decoration:none;">Sales Invoice</a></li>
                   </ul>
                 </div>
               {% else %}
