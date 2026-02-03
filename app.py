@@ -141,6 +141,27 @@ def _ensure_subcontract_bill_columns() -> None:
         return
 
 
+def _ensure_user_columns() -> None:
+    try:
+        inspector = inspect(db.engine)
+        if 'user' not in inspector.get_table_names():
+            return
+
+        statements = [
+            'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT 1',
+        ]
+
+        with db.engine.begin() as conn:
+            for stmt in statements:
+                try:
+                    conn.execute(text(stmt))
+                except Exception:
+                    if 'IF NOT EXISTS' in stmt:
+                        conn.execute(text(stmt.replace(' IF NOT EXISTS', '')))
+    except Exception:
+        return
+
+
 def _is_subcontract_bill_schema_ready() -> bool:
     try:
         inspector = inspect(db.engine)
@@ -155,6 +176,7 @@ def _is_subcontract_bill_schema_ready() -> bool:
 
 with app.app_context():
     _ensure_subcontract_bill_columns()
+    _ensure_user_columns()
 
 
 @app.after_request
@@ -360,6 +382,9 @@ def login():
 
         user = User.query.filter(func.lower(User.username) == username.lower()).first()
         if user and user.check_password(password):
+            if hasattr(user, 'is_active') and user.is_active is False:
+                flash('Account is on hold. Contact admin.', 'danger')
+                return render_template('login.html', next_url=next_url)
             session['user_id'] = user.id
             session['username'] = user.username
             session['role'] = user.role
@@ -3018,6 +3043,65 @@ def admin_submissions():
         .all()
     )
     return render_template('admin_submissions.html', submissions=submissions)
+
+
+@app.route('/admin/users', methods=['GET'])
+@require_admin
+def admin_users():
+    companies = Company.query.order_by(Company.name).all()
+    company_id = (request.args.get('company_id') or '').strip()
+
+    q = User.query
+    if company_id:
+        try:
+            q = q.filter(User.company_id == int(company_id))
+        except Exception:
+            q = q
+
+    users = q.order_by(User.role.asc(), User.username.asc()).all()
+
+    return render_template(
+        'admin_users.html',
+        users=users,
+        companies=companies,
+        selected_company_id=company_id,
+    )
+
+
+@app.route('/admin/users/<int:user_id>/reset', methods=['POST'])
+@require_admin
+def admin_user_reset(user_id: int):
+    user = db.session.get(User, user_id)
+    if not user:
+        abort(404)
+
+    new_password = (request.form.get('new_password') or '').strip()
+    if not new_password:
+        flash('New password is required.', 'danger')
+        return redirect(url_for('admin_users'))
+
+    user.set_password(new_password)
+    db.session.commit()
+    flash('Password updated.', 'success')
+    return redirect(url_for('admin_users'))
+
+
+@app.route('/admin/users/<int:user_id>/toggle', methods=['POST'])
+@require_admin
+def admin_user_toggle(user_id: int):
+    user = db.session.get(User, user_id)
+    if not user:
+        abort(404)
+
+    current_admin_id = session.get('user_id')
+    if current_admin_id and int(current_admin_id) == int(user.id):
+        flash('You cannot change your own account status.', 'danger')
+        return redirect(url_for('admin_users'))
+
+    user.is_active = not bool(getattr(user, 'is_active', True))
+    db.session.commit()
+    flash('User status updated.', 'success')
+    return redirect(url_for('admin_users'))
 
 
 @app.route('/admin/submissions/<int:submission_id>/process', methods=['POST'])

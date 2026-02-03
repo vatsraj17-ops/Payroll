@@ -70,6 +70,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(16), nullable=False, default='owner')  # 'admin' | 'owner'
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     company = db.relationship('Company', backref=db.backref('users', lazy=True))

@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Users</h2>
+<div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">Manage user access, reset passwords, and place accounts on hold.</div>
+
+<form method="get" action="/admin/users" class="mb-3">
+  <div class="row g-2">
+    <div class="col-12 col-md-4">
+      <label class="form-label" style="font-size:0.9rem;">Company</label>
+      <select name="company_id" class="form-select form-select-sm">
+        <option value="">-- All Companies --</option>
+        {% for c in companies %}
+          <option value="{{ c.id }}" {% if selected_company_id and selected_company_id|int == c.id %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-3" style="display:flex; align-items:end;">
+      <button class="btn btn-primary btn-sm w-100" type="submit">Filter</button>
+    </div>
+  </div>
+</form>
+
+{% if users and users|length > 0 %}
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Role</th>
+          <th>Company</th>
+          <th>Status</th>
+          <th style="width:260px;">Reset Password</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+          <tr>
+            <td class="fw-semibold">{{ u.username }}</td>
+            <td>{{ u.role }}</td>
+            <td>{{ u.company.name if u.company else '' }}</td>
+            <td>
+              {% if u.is_active is defined and not u.is_active %}
+                <span class="badge text-bg-warning">On Hold</span>
+              {% else %}
+                <span class="badge text-bg-success">Active</span>
+              {% endif %}
+            </td>
+            <td>
+              <form method="post" action="/admin/users/{{ u.id }}/reset" class="d-flex gap-2">
+                <input name="new_password" type="password" class="form-control form-control-sm" placeholder="New password" required>
+                <button class="btn btn-outline-primary btn-sm" type="submit">Update</button>
+              </form>
+            </td>
+            <td class="text-end">
+              <form method="post" action="/admin/users/{{ u.id }}/toggle" style="display:inline;" onsubmit="return confirm('Change this account status?');">
+                {% if u.is_active is defined and not u.is_active %}
+                  <button class="btn btn-outline-success btn-sm" type="submit">Activate</button>
+                {% else %}
+                  <button class="btn btn-outline-warning btn-sm" type="submit">Hold</button>
+                {% endif %}
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p class="text-muted">No users found.</p>
+{% endif %}
+{% endblock %}
