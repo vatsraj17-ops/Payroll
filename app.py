@@ -1015,6 +1015,175 @@ def sales_home():
     )
 
 
+@app.route('/sales/customers/<int:customer_id>/edit', methods=['GET', 'POST'])
+@require_login
+def sales_customer_edit(customer_id: int):
+    customer = db.session.get(Customer, customer_id)
+    if not customer:
+        abort(404)
+
+    allowed_company_ids = _allowed_company_ids_for_session()
+    if int(customer.company_id or 0) not in allowed_company_ids:
+        abort(403)
+
+    if request.method == 'POST':
+        name = (request.form.get('customer_name') or '').strip()
+        company_name = (request.form.get('customer_company') or '').strip()
+        email = (request.form.get('customer_email') or '').strip()
+        phone = (request.form.get('customer_phone') or '').strip()
+        address = (request.form.get('customer_address') or '').strip()
+        tax_number = (request.form.get('customer_tax') or '').strip()
+
+        if not name:
+            flash('Customer name is required.', 'danger')
+            return redirect(url_for('sales_customer_edit', customer_id=customer_id))
+
+        customer.name = name
+        customer.company_name = company_name or None
+        customer.email = email or None
+        customer.phone = phone or None
+        customer.address = address or None
+        customer.tax_number = tax_number or None
+        db.session.commit()
+        flash('Customer updated.', 'success')
+        return redirect(url_for('sales_home', company_id=customer.company_id))
+
+    return render_template('edit_customer.html', customer=customer)
+
+
+@app.route('/sales/invoices/<int:invoice_id>/edit', methods=['GET', 'POST'])
+@require_login
+def sales_invoice_edit(invoice_id: int):
+    invoice = db.session.get(SalesInvoice, invoice_id)
+    if not invoice:
+        abort(404)
+
+    allowed_company_ids = _allowed_company_ids_for_session()
+    if int(invoice.company_id or 0) not in allowed_company_ids:
+        abort(403)
+
+    customers = (
+        Customer.query
+        .filter(Customer.company_id == int(invoice.company_id))
+        .order_by(Customer.name.asc())
+        .all()
+    )
+
+    if request.method == 'POST':
+        customer_id_raw = (request.form.get('customer_id') or '').strip()
+        invoice_date_raw = (request.form.get('invoice_date') or '').strip()
+        due_date_raw = (request.form.get('due_date') or '').strip()
+        terms = (request.form.get('terms') or '').strip()
+        message = (request.form.get('message') or '').strip()
+        statement_message = (request.form.get('statement_message') or '').strip()
+        lines_raw = (request.form.get('invoice_lines_json') or '').strip()
+
+        if not customer_id_raw:
+            flash('Customer is required.', 'danger')
+            return redirect(url_for('sales_invoice_edit', invoice_id=invoice_id))
+
+        try:
+            customer_id_int = int(customer_id_raw)
+        except Exception:
+            flash('Customer selection is invalid.', 'danger')
+            return redirect(url_for('sales_invoice_edit', invoice_id=invoice_id))
+
+        customer = db.session.get(Customer, customer_id_int)
+        if not customer or int(customer.company_id or 0) != int(invoice.company_id or 0):
+            flash('Customer does not belong to this company.', 'danger')
+            return redirect(url_for('sales_invoice_edit', invoice_id=invoice_id))
+
+        invoice_date = _parse_date(invoice_date_raw)
+        if not invoice_date:
+            flash('Invoice date is required.', 'danger')
+            return redirect(url_for('sales_invoice_edit', invoice_id=invoice_id))
+
+        due_date = _parse_date(due_date_raw) if due_date_raw else None
+        if due_date_raw and not due_date:
+            flash('Due date must be valid.', 'danger')
+            return redirect(url_for('sales_invoice_edit', invoice_id=invoice_id))
+
+        try:
+            lines = json.loads(lines_raw) if lines_raw else []
+        except Exception:
+            lines = []
+
+        if not lines:
+            flash('Add at least one invoice line.', 'danger')
+            return redirect(url_for('sales_invoice_edit', invoice_id=invoice_id))
+
+        subtotal = 0.0
+        tax_total = 0.0
+        total = 0.0
+
+        invoice.customer_id = customer_id_int
+        invoice.invoice_date = invoice_date
+        invoice.due_date = due_date
+        invoice.terms = terms or None
+        invoice.message = message or None
+        invoice.statement_message = statement_message or None
+
+        SalesInvoiceLine.query.filter(SalesInvoiceLine.invoice_id == invoice.id).delete()
+
+        for line in lines:
+            service = (line.get('service') or '').strip()
+            description = (line.get('description') or '').strip()
+            try:
+                qty = float(line.get('qty') or 0)
+            except Exception:
+                qty = 0.0
+            try:
+                rate = float(line.get('rate') or 0)
+            except Exception:
+                rate = 0.0
+            taxable = bool(line.get('taxable'))
+            amount = qty * rate
+            tax_amount = amount * 0.13 if taxable else 0.0
+            line_total = amount + tax_amount
+
+            subtotal += amount
+            tax_total += tax_amount
+            total += line_total
+
+            db.session.add(SalesInvoiceLine(
+                invoice_id=invoice.id,
+                service=service or None,
+                description=description or None,
+                qty=qty,
+                rate=rate,
+                taxable=taxable,
+                amount=amount,
+                tax_amount=tax_amount,
+                total=line_total,
+            ))
+
+        invoice.subtotal = subtotal
+        invoice.tax_total = tax_total
+        invoice.total = total
+        invoice.balance_due = total
+        db.session.commit()
+        flash('Invoice updated.', 'success')
+        return redirect(url_for('sales_home', company_id=invoice.company_id, invoice_id=invoice.id))
+
+    lines_data = [
+        {
+            'service': line.service or '',
+            'description': line.description or '',
+            'qty': float(line.qty or 0.0),
+            'rate': float(line.rate or 0.0),
+            'taxable': bool(line.taxable),
+        }
+        for line in invoice.lines
+    ]
+
+    return render_template(
+        'edit_invoice.html',
+        invoice=invoice,
+        customers=customers,
+        lines_data=lines_data,
+    )
+
+
 @app.route('/sales/invoices/<int:invoice_id>/print', methods=['GET'])
 @require_login
 def sales_invoice_print(invoice_id: int):

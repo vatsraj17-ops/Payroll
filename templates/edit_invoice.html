@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+{% set hide_nav = true %}
+{% set hide_sidebar = true %}
+{% set show_hamburger = false %}
+{% block content %}
+<style>
+  .sales-shell {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 20px;
+  }
+  .sales-sidebar {
+    background: #f7f9fb;
+    border: 1px solid #e3e8ef;
+    border-radius: 12px;
+    padding: 16px;
+    height: fit-content;
+  }
+  .sales-sidebar .title {
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 12px;
+  }
+  .sales-nav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .sales-nav li { margin-bottom: 8px; }
+  .sales-nav a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    color: #0f172a;
+    text-decoration: none;
+    font-size: 0.92rem;
+  }
+  .sales-nav a:hover,
+  .sales-nav a.active {
+    background: #e8f0fe;
+    color: #1d4ed8;
+    font-weight: 600;
+  }
+  @media (max-width: 991px) {
+    .sales-shell { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="sales-shell">
+  <aside class="sales-sidebar">
+    <div class="title">Sales</div>
+    <ul class="sales-nav">
+      <li><a href="/">Home</a></li>
+      <li><a class="active" href="/sales">Sales Invoice</a></li>
+      <li><a href="/sales#customer">Customers</a></li>
+      <li><a href="/sales/reports">Reports</a></li>
+    </ul>
+  </aside>
+  <div>
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+      <div>
+        <h2 class="mb-1">Edit Invoice</h2>
+        <div class="text-muted" style="font-size:0.95rem;">Update invoice and line items.</div>
+      </div>
+      <div>
+        <a class="btn btn-outline-secondary btn-sm" href="/sales?company_id={{ invoice.company_id }}">Back</a>
+      </div>
+    </div>
+
+    <div class="card mb-4" id="invoice">
+      <div class="card-body">
+        <div class="fw-semibold mb-2">Invoice</div>
+        <form method="post" id="invoice-form">
+          <input type="hidden" name="invoice_lines_json" id="invoice_lines_json">
+          <div class="row g-2">
+            <div class="col-12 col-md-4">
+              <label class="form-label" style="font-size:0.9rem;">Customer</label>
+              <select name="customer_id" class="form-select form-select-sm" required>
+                <option value="">-- Customer --</option>
+                {% for c in customers %}
+                  <option value="{{ c.id }}" {% if invoice.customer_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label" style="font-size:0.9rem;">Invoice Date</label>
+              <input name="invoice_date" type="date" class="form-control form-control-sm" value="{{ invoice.invoice_date.strftime('%Y-%m-%d') if invoice.invoice_date else '' }}" required>
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label" style="font-size:0.9rem;">Due Date</label>
+              <input name="due_date" type="date" class="form-control form-control-sm" value="{{ invoice.due_date.strftime('%Y-%m-%d') if invoice.due_date else '' }}">
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label" style="font-size:0.9rem;">Terms</label>
+              <select name="terms" class="form-select form-select-sm">
+                <option value="Net 30" {% if invoice.terms == 'Net 30' %}selected{% endif %}>Net 30</option>
+                <option value="Net 15" {% if invoice.terms == 'Net 15' %}selected{% endif %}>Net 15</option>
+                <option value="Due on receipt" {% if invoice.terms == 'Due on receipt' %}selected{% endif %}>Due on receipt</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-responsive mt-3">
+            <table class="table table-sm align-middle" id="invoice-lines">
+              <thead style="background:#eef3f8;">
+                <tr>
+                  <th>Service</th>
+                  <th>Description</th>
+                  <th class="text-end" style="width:90px;">Qty</th>
+                  <th class="text-end" style="width:120px;">Rate</th>
+                  <th class="text-center" style="width:90px;">Tax</th>
+                  <th class="text-end" style="width:120px;">Amount</th>
+                  <th style="width:40px;"></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="d-flex gap-2 mb-3">
+            <button class="btn btn-outline-secondary btn-sm" type="button" id="add-line">Add line</button>
+          </div>
+
+          <div class="row">
+            <div class="col-12 col-md-6">
+              <label class="form-label" style="font-size:0.9rem;">Message on invoice</label>
+              <textarea name="message" class="form-control form-control-sm" rows="3">{{ invoice.message or '' }}</textarea>
+              <label class="form-label mt-2" style="font-size:0.9rem;">Message on statement</label>
+              <textarea name="statement_message" class="form-control form-control-sm" rows="3">{{ invoice.statement_message or '' }}</textarea>
+            </div>
+            <div class="col-12 col-md-6">
+              <div class="d-flex justify-content-between"><span class="text-muted">Subtotal</span><strong id="subtotal">$0.00</strong></div>
+              <div class="d-flex justify-content-between"><span class="text-muted">HST (13%)</span><strong id="tax">$0.00</strong></div>
+              <div class="d-flex justify-content-between border-top pt-2 mt-2"><span class="text-muted">Total</span><strong id="total">$0.00</strong></div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end mt-3">
+            <button class="btn btn-success btn-sm" type="submit">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const linesBody = document.querySelector('#invoice-lines tbody');
+  const addLineBtn = document.getElementById('add-line');
+  const subtotalEl = document.getElementById('subtotal');
+  const taxEl = document.getElementById('tax');
+  const totalEl = document.getElementById('total');
+  const linesInput = document.getElementById('invoice_lines_json');
+  const linesData = {{ lines_data | tojson }};
+
+  const money = (value) => `$${value.toFixed(2)}`;
+
+  const recalc = () => {
+    let subtotal = 0;
+    let tax = 0;
+    const lines = [];
+    linesBody.querySelectorAll('tr').forEach((row) => {
+      const service = row.querySelector('[name="service"]').value;
+      const description = row.querySelector('[name="description"]').value;
+      const qty = parseFloat(row.querySelector('[name="qty"]').value || '0');
+      const rate = parseFloat(row.querySelector('[name="rate"]').value || '0');
+      const taxable = row.querySelector('[name="taxable"]').checked;
+      const amount = qty * rate;
+      const taxAmount = taxable ? amount * 0.13 : 0;
+      subtotal += amount;
+      tax += taxAmount;
+      row.querySelector('.line-amount').textContent = money(amount);
+      lines.push({ service, description, qty, rate, taxable });
+    });
+    subtotalEl.textContent = money(subtotal);
+    taxEl.textContent = money(tax);
+    totalEl.textContent = money(subtotal + tax);
+    linesInput.value = JSON.stringify(lines);
+  };
+
+  const addLine = (data = null) => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td><input name="service" class="form-control form-control-sm" value="${data?.service || ''}"></td>
+      <td><input name="description" class="form-control form-control-sm" value="${data?.description || ''}"></td>
+      <td><input name="qty" type="number" step="0.01" class="form-control form-control-sm text-end" value="${data?.qty ?? ''}"></td>
+      <td><input name="rate" type="number" step="0.01" class="form-control form-control-sm text-end" value="${data?.rate ?? ''}"></td>
+      <td class="text-center"><input name="taxable" type="checkbox" ${data?.taxable !== false ? 'checked' : ''}></td>
+      <td class="text-end line-amount">$0.00</td>
+      <td class="text-end"><button class="btn btn-outline-danger btn-sm" type="button">×</button></td>
+    `;
+    row.querySelectorAll('input').forEach((input) => input.addEventListener('input', recalc));
+    row.querySelector('button').addEventListener('click', () => {
+      row.remove();
+      recalc();
+    });
+    linesBody.appendChild(row);
+  };
+
+  addLineBtn.addEventListener('click', () => {
+    addLine();
+    recalc();
+  });
+
+  if (linesData && linesData.length > 0) {
+    linesData.forEach((line) => addLine(line));
+  } else {
+    addLine();
+  }
+  recalc();
+</script>
+{% endblock %}

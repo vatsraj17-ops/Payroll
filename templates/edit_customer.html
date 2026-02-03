@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% set hide_nav = true %}
+{% set hide_sidebar = true %}
+{% set show_hamburger = false %}
+{% block content %}
+<style>
+  .sales-shell {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 20px;
+  }
+  .sales-sidebar {
+    background: #f7f9fb;
+    border: 1px solid #e3e8ef;
+    border-radius: 12px;
+    padding: 16px;
+    height: fit-content;
+  }
+  .sales-sidebar .title {
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 12px;
+  }
+  .sales-nav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .sales-nav li { margin-bottom: 8px; }
+  .sales-nav a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    color: #0f172a;
+    text-decoration: none;
+    font-size: 0.92rem;
+  }
+  .sales-nav a:hover,
+  .sales-nav a.active {
+    background: #e8f0fe;
+    color: #1d4ed8;
+    font-weight: 600;
+  }
+  @media (max-width: 991px) {
+    .sales-shell { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="sales-shell">
+  <aside class="sales-sidebar">
+    <div class="title">Sales</div>
+    <ul class="sales-nav">
+      <li><a href="/">Home</a></li>
+      <li><a href="/sales">Sales Invoice</a></li>
+      <li><a class="active" href="/sales#customer">Customers</a></li>
+      <li><a href="/sales/reports">Reports</a></li>
+    </ul>
+  </aside>
+  <div>
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+      <div>
+        <h2 class="mb-1">Edit Customer</h2>
+        <div class="text-muted" style="font-size:0.95rem;">Update customer information.</div>
+      </div>
+      <div>
+        <a class="btn btn-outline-secondary btn-sm" href="/sales?company_id={{ customer.company_id }}">Back</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <form method="post">
+          <div class="row g-2">
+            <div class="col-12 col-md-6">
+              <label class="form-label" style="font-size:0.9rem;">Customer Name</label>
+              <input name="customer_name" class="form-control form-control-sm" value="{{ customer.name }}" required>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" style="font-size:0.9rem;">Company Name</label>
+              <input name="customer_company" class="form-control form-control-sm" value="{{ customer.company_name or '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" style="font-size:0.9rem;">Email</label>
+              <input name="customer_email" type="email" class="form-control form-control-sm" value="{{ customer.email or '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" style="font-size:0.9rem;">Phone</label>
+              <input name="customer_phone" class="form-control form-control-sm" value="{{ customer.phone or '' }}">
+            </div>
+            <div class="col-12">
+              <label class="form-label" style="font-size:0.9rem;">Address</label>
+              <input name="customer_address" class="form-control form-control-sm" value="{{ customer.address or '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" style="font-size:0.9rem;">Tax Number</label>
+              <input name="customer_tax" class="form-control form-control-sm" value="{{ customer.tax_number or '' }}">
+            </div>
+            <div class="col-12 col-md-4" style="display:flex; align-items:end;">
+              <button class="btn btn-success btn-sm w-100" type="submit">Save Changes</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
