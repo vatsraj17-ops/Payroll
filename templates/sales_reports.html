@@ -3,20 +3,61 @@
 {% set hide_sidebar = true %}
 {% set show_hamburger = false %}
 {% block content %}
-<div class="row">
-  <div class="col-12 col-lg-3 mb-3">
-    <div class="card">
-      <div class="card-body">
-        <div class="fw-semibold mb-2">Sales</div>
-        <div class="d-grid gap-2">
-          <a class="btn btn-outline-secondary btn-sm" href="/sales">Sales Invoice</a>
-          <a class="btn btn-outline-secondary btn-sm" href="/sales#customer">Customers</a>
-          <a class="btn btn-outline-secondary btn-sm" href="/sales/reports">Reports</a>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="col-12 col-lg-9">
+<style>
+  .sales-shell {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 20px;
+  }
+  .sales-sidebar {
+    background: #f7f9fb;
+    border: 1px solid #e3e8ef;
+    border-radius: 12px;
+    padding: 16px;
+    height: fit-content;
+  }
+  .sales-sidebar .title {
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 12px;
+  }
+  .sales-nav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .sales-nav li { margin-bottom: 8px; }
+  .sales-nav a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    border-radius: 0;
+    color: #0f172a;
+    text-decoration: none;
+    font-size: 0.92rem;
+  }
+  .sales-nav a:hover,
+  .sales-nav a.active {
+    color: #1d4ed8;
+    font-weight: 600;
+  }
+  @media (max-width: 991px) {
+    .sales-shell { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="sales-shell">
+  <aside class="sales-sidebar">
+    <div class="title">Sales</div>
+    <ul class="sales-nav">
+      <li><a href="/">Home</a></li>
+      <li><a href="/sales">Sales Invoice</a></li>
+      <li><a href="/sales#customer">Customers</a></li>
+      <li><a class="active" href="/sales/reports">Reports</a></li>
+    </ul>
+  </aside>
+  <div>
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
       <div>
         <h2 class="mb-1">Sales Reports</h2>
