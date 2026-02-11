@@ -8,5 +8,47 @@
     Let’s get your employees paid accurately and on time.
   </div>
 {% endif %}
-
+<div class="row g-3 mt-3">
+  {% if session.get('role') == 'admin' %}
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">Companies</h5>
+        <p class="card-text text-muted" style="font-size:0.9rem;">Add and manage companies</p>
+        <a href="/companies" class="btn btn-primary btn-sm">Manage Companies</a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">Payroll</h5>
+        <p class="card-text text-muted" style="font-size:0.9rem;">Run payroll and manage employees</p>
+        <a href="/payroll" class="btn btn-primary btn-sm">Go to Payroll</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">Sales</h5>
+        <p class="card-text text-muted" style="font-size:0.9rem;">Manage invoices and customers</p>
+        <a href="/sales" class="btn btn-primary btn-sm">Go to Sales</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">Expenses</h5>
+        <p class="card-text text-muted" style="font-size:0.9rem;">Track expenses and bills</p>
+        <a href="/expenses" class="btn btn-primary btn-sm">Go to Expenses</a>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
