@@ -1,6 +1,72 @@
 {% extends 'base.html' %}
+{% set hide_nav = true %}
+{% set hide_sidebar = true %}
+{% set show_hamburger = false %}
 {% block content %}
-<h2>Reports</h2>
+<style>
+  .side-shell {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 20px;
+  }
+  .side-sidebar {
+    background: #f7f9fb;
+    border: 1px solid #e3e8ef;
+    border-radius: 12px;
+    padding: 16px;
+    height: fit-content;
+  }
+  .side-sidebar .title {
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 12px;
+  }
+  .side-nav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .side-nav li {
+    margin-bottom: 8px;
+  }
+  .side-nav a {
+    display: block;
+    text-decoration: none;
+    color: #475569;
+    padding: 6px 0;
+    border-radius: 0;
+    transition: all 0.2s;
+  }
+  .side-nav a:hover {
+    color: #1d4ed8;
+    font-weight: 600;
+  }
+  .side-nav a.active {
+    color: #1d4ed8;
+    font-weight: 600;
+  }
+  .main-content {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e3e8ef;
+    padding: 20px;
+  }
+</style>
+
+<div class="side-shell">
+  <div class="side-sidebar">
+    <div class="title">Payroll</div>
+    <ul class="side-nav">
+      <li><a href="/">Home</a></li>
+      <li><a href="/payroll">Run Payroll</a></li>
+      <li><a href="/employees">Employees</a></li>
+      <li><a href="/data-entry">Data Entry</a></li>
+      <li><a href="/reports" class="active">Reports</a></li>
+    </ul>
+  </div>
+
+  <div class="main-content">
+    <h2>Reports</h2>
 <div class="text-muted" style="font-size:0.95rem; margin-top:-0.25rem; margin-bottom:1rem;">Select filters to see report options.</div>
 
 <form method="post" action="/reports" class="mb-4">
@@ -136,4 +202,7 @@
 	companySelect && companySelect.addEventListener('change', filterEmployees);
 	filterEmployees();
 </script>
+
+  </div>
+</div>
 {% endblock %}
