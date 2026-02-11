@@ -56,47 +56,23 @@
     <div class="title">Sales</div>
     <ul class="sales-nav">
       <li><a href="/">Home</a></li>
-      <li><a class="active" href="/sales">Sales Invoice</a></li>
-      <li><a href="/sales#customer">Customers</a></li>
+      <li><a {% if not show_customers %}class="active"{% endif %} href="/sales">Sales Invoice</a></li>
+      <li><a {% if show_customers %}class="active"{% endif %} href="/sales?view=customers">Customers</a></li>
       <li><a href="/sales/reports">Reports</a></li>
     </ul>
   </aside>
   <div>
+    {% if show_customers %}
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
       <div>
-        <h2 class="mb-1">Sales Invoice</h2>
-        <div class="text-muted" style="font-size:0.95rem;">Create customers and invoices.</div>
+        <h2 class="mb-1">Customers</h2>
+        <div class="text-muted" style="font-size:0.95rem;">Manage your customers.</div>
       </div>
-      {% if saved_invoice %}
-        <div>
-          <a class="btn btn-outline-success btn-sm" href="/sales/invoices/{{ saved_invoice.id }}/print" target="_blank">Print</a>
-        </div>
-      {% endif %}
     </div>
-
-    <form method="get" action="/sales" class="mb-3">
-      <div class="row g-2">
-        <div class="col-12 col-md-6">
-          <label class="form-label" style="font-size:0.9rem;">Company</label>
-          <select name="company_id" class="form-select form-select-sm" {% if session.get('role') == 'owner' %}disabled{% endif %}>
-            <option value="">-- Company --</option>
-            {% for c in companies %}
-              <option value="{{ c.id }}" {% if selected_company_id and selected_company_id|int == c.id %}selected{% endif %}>{{ c.name }}</option>
-            {% endfor %}
-          </select>
-          {% if session.get('role') == 'owner' %}
-            <input type="hidden" name="company_id" value="{{ selected_company_id }}">
-          {% endif %}
-        </div>
-        <div class="col-12 col-md-3" style="display:flex; align-items:end;">
-          <button class="btn btn-outline-primary btn-sm w-100" type="submit">Load</button>
-        </div>
-      </div>
-    </form>
 
     <div class="card mb-4" id="customer">
       <div class="card-body">
-        <div class="fw-semibold mb-2">Customer</div>
+        <div class="fw-semibold mb-2">Add New Customer</div>
         <form method="post" action="/sales">
           <input type="hidden" name="form_type" value="customer">
           <input type="hidden" name="company_id" value="{{ selected_company_id }}">
@@ -162,6 +138,39 @@
         </div>
       </div>
     {% endif %}
+
+    {% else %}
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+      <div>
+        <h2 class="mb-1">Sales Invoice</h2>
+        <div class="text-muted" style="font-size:0.95rem;">Create invoices for your customers.</div>
+      </div>
+      {% if saved_invoice %}
+        <div>
+          <a class="btn btn-outline-success btn-sm" href="/sales/invoices/{{ saved_invoice.id }}/print" target="_blank">Print</a>
+        </div>
+      {% endif %}
+    </div>
+
+    <form method="get" action="/sales" class="mb-3">
+      <div class="row g-2">
+        <div class="col-12 col-md-6">
+          <label class="form-label" style="font-size:0.9rem;">Company</label>
+          <select name="company_id" class="form-select form-select-sm" {% if session.get('role') == 'owner' %}disabled{% endif %}>
+            <option value="">-- Company --</option>
+            {% for c in companies %}
+              <option value="{{ c.id }}" {% if selected_company_id and selected_company_id|int == c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+          {% if session.get('role') == 'owner' %}
+            <input type="hidden" name="company_id" value="{{ selected_company_id }}">
+          {% endif %}
+        </div>
+        <div class="col-12 col-md-3" style="display:flex; align-items:end;">
+          <button class="btn btn-outline-primary btn-sm w-100" type="submit">Load</button>
+        </div>
+      </div>
+    </form>
 
     <div class="card mb-4" id="invoice">
       <div class="card-body">
@@ -333,4 +342,5 @@
   addLine();
   recalc();
 </script>
+{% endif %}
 {% endblock %}

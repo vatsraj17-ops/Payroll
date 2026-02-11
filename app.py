@@ -877,7 +877,7 @@ def sales_home():
             db.session.add(customer)
             db.session.commit()
             flash('Customer saved.', 'success')
-            return redirect(url_for('sales_home', company_id=company_id_int))
+            return redirect(url_for('sales_home', company_id=company_id_int, view='customers'))
 
         if form_type == 'invoice':
             company_id_raw = (request.form.get('company_id') or '').strip()
@@ -1005,6 +1005,8 @@ def sales_home():
             if _is_admin_session() or int(candidate.company_id or 0) == int(session.get('company_id') or 0):
                 saved_invoice = candidate
 
+    show_customers = (request.args.get('view') or '').strip() == 'customers'
+
     return render_template(
         'sales_home.html',
         companies=companies,
@@ -1012,6 +1014,7 @@ def sales_home():
         invoices=invoices,
         selected_company_id=selected_company_id,
         saved_invoice=saved_invoice,
+        show_customers=show_customers,
     )
 
 
