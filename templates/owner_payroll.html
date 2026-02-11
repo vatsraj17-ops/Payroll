@@ -4,12 +4,68 @@
 {% set hide_sidebar = true %}
 {% set show_hamburger = true %}
 {% block content %}
-<div class="d-flex align-items-center justify-content-between">
-  <h2 class="mb-0">Run Payroll</h2>
-  <a class="employee-link" href="/employees">Add Employee</a>
-</div>
+<style>
+  .side-shell {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 20px;
+  }
+  .side-sidebar {
+    background: #f7f9fb;
+    border: 1px solid #e3e8ef;
+    border-radius: 12px;
+    padding: 16px;
+    height: fit-content;
+  }
+  .side-sidebar .title {
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 12px;
+  }
+  .side-nav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .side-nav li { margin-bottom: 8px; }
+  .side-nav a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    border-radius: 0;
+    color: #0f172a;
+    text-decoration: none;
+    font-size: 0.92rem;
+  }
+  .side-nav a:hover,
+  .side-nav a.active {
+    color: #1d4ed8;
+    font-weight: 600;
+  }
+  @media (max-width: 991px) {
+    .side-shell { grid-template-columns: 1fr; }
+  }
+</style>
 
-<form method="post" class="mb-4">
+<div class="side-shell">
+  <aside class="side-sidebar">
+    <div class="title">Payroll</div>
+    <ul class="side-nav">
+      <li><a href="/">Home</a></li>
+      <li><a class="active" href="/owner/payroll">Run Payroll</a></li>
+      <li><a href="/owner/payroll/edit">Edit Payroll</a></li>
+      <li><a href="/owner/payroll-summary">Payroll Summary</a></li>
+      <li><a href="/owner/reports">Payroll Reports</a></li>
+    </ul>
+  </aside>
+  <div>
+    <div class="d-flex align-items-center justify-content-between">
+      <h2 class="mb-0">Run Payroll</h2>
+      <a class="employee-link" href="/employees">Add Employee</a>
+    </div>
+
+    <form method="post" class="mb-4">
   <div class="row g-2 align-items-end mb-3">
     <div class="col-12 col-md-4">
       <label class="form-label" style="font-size:0.9rem;">Period start</label>
@@ -62,11 +118,13 @@
     </table>
   </div>
 
-  <div class="mt-3 d-flex justify-content-end gap-3">
-    <button class="btn btn-sm" style="background:#198754; color:#fff;">Submit Payroll</button>
-    <button class="btn btn-sm" type="submit" formaction="/owner/payroll/preview" formmethod="post" style="background:#fff; color:#198754; border:1px solid #198754;">Preview</button>
+      <div class="mt-3 d-flex justify-content-end gap-3">
+        <button class="btn btn-sm" style="background:#198754; color:#fff;">Submit Payroll</button>
+        <button class="btn btn-sm" type="submit" formaction="/owner/payroll/preview" formmethod="post" style="background:#fff; color:#198754; border:1px solid #198754;">Preview</button>
+      </div>
+    </form>
   </div>
-</form>
+</div>
 
 <script>
   document.querySelectorAll('.include-checkbox, #select-all').forEach(cb => {
