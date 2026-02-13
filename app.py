@@ -1277,6 +1277,14 @@ def sales_reports():
 @app.route('/sales/reports/print', methods=['GET'])
 @require_login
 def sales_reports_print():
+    import io
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+
     company_id = (request.args.get('company_id') or '').strip()
     customer_id = (request.args.get('customer_id') or '').strip()
     date_from = (request.args.get('date_from') or '').strip()
@@ -1310,25 +1318,179 @@ def sales_reports_print():
         q = q.filter(SalesInvoice.invoice_date <= date_to)
     
     invoices = q.order_by(SalesInvoice.invoice_date.asc(), SalesInvoice.id.asc()).all()
-    
-    totals = {'subtotal': 0.0, 'tax': 0.0, 'total': 0.0}
-    for inv in invoices:
-        totals['subtotal'] += float(inv.subtotal or 0.0)
-        totals['tax'] += float(inv.tax_total or 0.0)
-        totals['total'] += float(inv.total or 0.0)
 
-    customer_filter = None
-    if customer_id:
-        customer_filter = db.session.get(Customer, int(customer_id))
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('ReportTitle', parent=styles['Heading2'], alignment=TA_CENTER, textColor=colors.HexColor('#3b82f6'))
+    value_style = ParagraphStyle('Value', parent=styles['BodyText'])
+    meta_right = ParagraphStyle('MetaRight', parent=styles['BodyText'], alignment=TA_RIGHT)
+    story = []
 
-    return render_template(
-        'sales_reports_print.html',
-        company=company,
-        invoices=invoices,
-        totals=totals,
-        customer_filter=customer_filter,
-        date_from=date_from,
-        date_to=date_to,
+    def _money(value: float) -> str:
+        try:
+            return f"${float(value):,.2f}"
+        except Exception:
+            return "$0.00"
+
+    def _format_address_lines(raw: str) -> str:
+        if not raw:
+            return ''
+        if '\n' in raw:
+            parts = [p.strip() for p in raw.split('\n') if p.strip()]
+        else:
+            parts = [p.strip() for p in raw.split(',') if p.strip()]
+        return '<br/>'.join(parts)
+
+    if not invoices:
+        story.append(Paragraph('No sales invoices match the selected filters.', styles['BodyText']))
+    else:
+        company_name = company.name if company else ''
+        company_address = _format_address_lines(company.address) if company and company.address else ''
+        company_hst = f"HST Number # {company.business_number} RT0001" if company and company.business_number else ''
+
+        customer_filter = None
+        if customer_id:
+            customer_filter = db.session.get(Customer, int(customer_id))
+        
+        customer_info = ''
+        if customer_filter:
+            customer_name = customer_filter.name if customer_filter else ''
+            customer_address = _format_address_lines(customer_filter.address) if customer_filter and customer_filter.address else ''
+            customer_hst = f"HST Number # {customer_filter.tax_number} RT 0001" if customer_filter and customer_filter.tax_number else ''
+            customer_info = f"<b>{customer_name}</b><br/>{customer_address}<br/>{customer_hst}" if customer_name else ''
+
+        story.append(Paragraph('Sales Reports', title_style))
+        story.append(Spacer(1, 6))
+
+        period_text = ''
+        if date_from and date_to:
+            period_text = f"{date_from} - {date_to}"
+        elif date_from:
+            period_text = f"From {date_from}"
+        elif date_to:
+            period_text = f"To {date_to}"
+        else:
+            period_text = "All Time"
+
+        header_tbl = Table(
+            [
+                [
+                    Paragraph(f"<b>{company_name}</b><br/>{company_address}<br/>{company_hst}", value_style),
+                    Paragraph(f"<b>Period</b><br/>{period_text}", meta_right),
+                ],
+            ],
+            colWidths=[doc.width * 0.7, doc.width * 0.3],
+        )
+        header_tbl.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        story.append(header_tbl)
+        story.append(Spacer(1, 8))
+
+        if customer_info:
+            story.append(Spacer(1, 10))
+            customer_tbl = Table(
+                [
+                    [Paragraph("<font color='#2b5a85'><b>Customer</b></font>", value_style)],
+                    [Paragraph(customer_info, value_style)],
+                ],
+                colWidths=[doc.width],
+            )
+            customer_tbl.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ]))
+            story.append(customer_tbl)
+            story.append(Spacer(1, 10))
+
+        show_customer_column = not customer_id
+        if show_customer_column:
+            line_rows = [['INVOICE #', 'DATE', 'CUSTOMER', 'SUBTOTAL', 'TAX', 'TOTAL']]
+        else:
+            line_rows = [['INVOICE #', 'DATE', 'SUBTOTAL', 'TAX', 'TOTAL']]
+
+        total_subtotal = 0.0
+        total_tax = 0.0
+        total_grand = 0.0
+
+        for inv in invoices:
+            subtotal = float(inv.subtotal or 0.0)
+            tax = float(inv.tax_total or 0.0)
+            total = float(inv.total or 0.0)
+            total_subtotal += subtotal
+            total_tax += tax
+            total_grand += total
+
+            if show_customer_column:
+                line_rows.append([
+                    str(inv.id),
+                    inv.invoice_date.strftime('%Y-%m-%d') if inv.invoice_date else '',
+                    inv.customer.name if inv.customer else '',
+                    _money(subtotal),
+                    _money(tax),
+                    _money(total),
+                ])
+            else:
+                line_rows.append([
+                    str(inv.id),
+                    inv.invoice_date.strftime('%Y-%m-%d') if inv.invoice_date else '',
+                    _money(subtotal),
+                    _money(tax),
+                    _money(total),
+                ])
+
+        if show_customer_column:
+            line_tbl = Table(
+                line_rows,
+                colWidths=[1.0 * inch, 1.2 * inch, 2.0 * inch, 1.2 * inch, 1.0 * inch, 1.2 * inch],
+            )
+        else:
+            line_tbl = Table(
+                line_rows,
+                colWidths=[1.2 * inch, 1.5 * inch, 1.5 * inch, 1.3 * inch, 1.3 * inch],
+            )
+
+        line_tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#eef3f8')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#2b5a85')),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('LINEBELOW', (0, 0), (-1, 0), 0.5, colors.HexColor('#cbd5e1')),
+            ('LINEBELOW', (0, 1), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
+            ('ALIGN', (-3, 1), (-1, -1), 'RIGHT'),
+            ('ALIGN', (-3, 0), (-1, 0), 'RIGHT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        story.append(line_tbl)
+        story.append(Spacer(1, 8))
+
+        totals_tbl = Table(
+            [
+                ['Subtotal', _money(total_subtotal)],
+                ['Sales Tax Total', _money(total_tax)],
+                ['Grand Total', _money(total_grand)],
+            ],
+            colWidths=[doc.width * 0.75, doc.width * 0.25],
+        )
+        totals_tbl.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('LINEABOVE', (0, 2), (-1, 2), 0.5, colors.HexColor('#cbd5e1')),
+        ]))
+        story.append(totals_tbl)
+
+    doc.build(story)
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name='sales_reports.pdf',
     )
 
 
