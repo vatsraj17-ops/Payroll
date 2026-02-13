@@ -63,6 +63,11 @@
         <h2 class="mb-1">Sales Reports</h2>
         <div class="text-muted" style="font-size:0.95rem;">Filter invoices by period and customer.</div>
       </div>
+      {% if invoices and invoices|length > 0 %}
+      <div>
+        <a class="btn btn-outline-success btn-sm" href="/sales/reports/print?company_id={{ selected_company_id }}&customer_id={{ selected_customer_id }}&date_from={{ selected_date_from }}&date_to={{ selected_date_to }}" target="_blank">Print Report</a>
+      </div>
+      {% endif %}
     </div>
 
     <form method="get" action="/sales/reports" class="mb-3">

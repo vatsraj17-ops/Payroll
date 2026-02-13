@@ -1274,6 +1274,64 @@ def sales_reports():
     )
 
 
+@app.route('/sales/reports/print', methods=['GET'])
+@require_login
+def sales_reports_print():
+    company_id = (request.args.get('company_id') or '').strip()
+    customer_id = (request.args.get('customer_id') or '').strip()
+    date_from = (request.args.get('date_from') or '').strip()
+    date_to = (request.args.get('date_to') or '').strip()
+
+    if _is_owner_session():
+        company_id = str(session.get('company_id') or '').strip()
+
+    if not company_id:
+        abort(400)
+
+    try:
+        company_id_int = int(company_id)
+    except Exception:
+        abort(400)
+
+    allowed_company_ids = _allowed_company_ids_for_session()
+    if company_id_int not in allowed_company_ids:
+        abort(403)
+
+    company = db.session.get(Company, company_id_int)
+    if not company:
+        abort(404)
+
+    q = SalesInvoice.query.filter(SalesInvoice.company_id == company_id_int)
+    if customer_id:
+        q = q.filter(SalesInvoice.customer_id == int(customer_id))
+    if date_from:
+        q = q.filter(SalesInvoice.invoice_date >= date_from)
+    if date_to:
+        q = q.filter(SalesInvoice.invoice_date <= date_to)
+    
+    invoices = q.order_by(SalesInvoice.invoice_date.asc(), SalesInvoice.id.asc()).all()
+    
+    totals = {'subtotal': 0.0, 'tax': 0.0, 'total': 0.0}
+    for inv in invoices:
+        totals['subtotal'] += float(inv.subtotal or 0.0)
+        totals['tax'] += float(inv.tax_total or 0.0)
+        totals['total'] += float(inv.total or 0.0)
+
+    customer_filter = None
+    if customer_id:
+        customer_filter = db.session.get(Customer, int(customer_id))
+
+    return render_template(
+        'sales_reports_print.html',
+        company=company,
+        invoices=invoices,
+        totals=totals,
+        customer_filter=customer_filter,
+        date_from=date_from,
+        date_to=date_to,
+    )
+
+
 @app.route('/employees', methods=['GET', 'POST'])
 @require_login
 def employees():

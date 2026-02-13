@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales Report - {{ company.name }}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 40px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .header {
+      margin-bottom: 30px;
+      border-bottom: 2px solid #333;
+      padding-bottom: 20px;
+    }
+    .company-name {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 5px;
+    }
+    .company-details {
+      font-size: 13px;
+      color: #666;
+    }
+    .report-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #333;
+      margin-top: 15px;
+      margin-bottom: 10px;
+    }
+    .filter-info {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    thead {
+      background: #f5f5f5;
+    }
+    th {
+      text-align: left;
+      padding: 10px;
+      font-weight: 600;
+      border-bottom: 2px solid #333;
+      font-size: 13px;
+    }
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #ddd;
+      font-size: 13px;
+    }
+    .text-end {
+      text-align: right;
+    }
+    .totals-section {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+    .totals-box {
+      width: 300px;
+      border-top: 2px solid #333;
+      padding-top: 15px;
+    }
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      font-size: 14px;
+    }
+    .totals-row.grand-total {
+      font-weight: bold;
+      font-size: 16px;
+      border-top: 2px solid #333;
+      margin-top: 10px;
+      padding-top: 10px;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #ddd;
+      font-size: 12px;
+      color: #999;
+      text-align: center;
+    }
+    @media print {
+      body { padding: 20px; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print" style="margin-bottom: 20px;">
+    <button onclick="window.print()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Print Report</button>
+    <button onclick="window.close()" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-left: 10px;">Close</button>
+  </div>
+
+  <div class="header">
+    <div class="company-name">{{ company.name }}</div>
+    {% if company.address %}
+    <div class="company-details">{{ company.address }}</div>
+    {% endif %}
+    {% if company.business_number %}
+    <div class="company-details">Business Number: {{ company.business_number }}</div>
+    {% endif %}
+    
+    <div class="report-title">Sales Report</div>
+    <div class="filter-info">
+      {% if customer_filter %}
+        Customer: <strong>{{ customer_filter.name }}</strong><br>
+      {% endif %}
+      {% if date_from and date_to %}
+        Period: <strong>{{ date_from }} to {{ date_to }}</strong>
+      {% elif date_from %}
+        From: <strong>{{ date_from }}</strong>
+      {% elif date_to %}
+        To: <strong>{{ date_to }}</strong>
+      {% else %}
+        Period: <strong>All Time</strong>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if invoices and invoices|length > 0 %}
+  <table>
+    <thead>
+      <tr>
+        <th>Invoice #</th>
+        <th>Date</th>
+        <th>Customer</th>
+        <th class="text-end">Subtotal</th>
+        <th class="text-end">Tax</th>
+        <th class="text-end">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for inv in invoices %}
+      <tr>
+        <td>{{ inv.id }}</td>
+        <td>{{ inv.invoice_date }}</td>
+        <td>{{ inv.customer.name if inv.customer else '' }}</td>
+        <td class="text-end">{{ (inv.subtotal or 0) | money }}</td>
+        <td class="text-end">{{ (inv.tax_total or 0) | money }}</td>
+        <td class="text-end">{{ (inv.total or 0) | money }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="totals-section">
+    <div class="totals-box">
+      <div class="totals-row">
+        <span>Subtotal:</span>
+        <strong>{{ totals.subtotal | money }}</strong>
+      </div>
+      <div class="totals-row">
+        <span>Tax:</span>
+        <strong>{{ totals.tax | money }}</strong>
+      </div>
+      <div class="totals-row grand-total">
+        <span>Grand Total:</span>
+        <strong>{{ totals.total | money }}</strong>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <p style="text-align: center; color: #999; padding: 40px 0;">No invoices found for the selected period.</p>
+  {% endif %}
+
+  <div class="footer">
+    Generated on {{ now().strftime('%Y-%m-%d %H:%M') }}
+  </div>
+</body>
+</html>
